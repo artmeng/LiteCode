@@ -1,0 +1,536 @@
+export interface ToolInfo {
+  name: string
+  description: string
+  parameters?: Record<string, unknown>
+  read_only?: boolean
+  exclusive?: boolean
+  concurrency_safe?: boolean
+  source?: 'builtin' | 'mcp'
+  server?: string
+}
+
+export interface McpServerConfig {
+  transport?: string
+  command?: string | null
+  args?: string[]
+  env?: Record<string, string>
+  url?: string | null
+  headers?: Record<string, string>
+  enabled?: boolean
+  tool_overrides?: Record<string, { read_only?: boolean; exclusive?: boolean }>
+}
+
+export interface McpConfigPayload {
+  servers: Record<string, McpServerConfig>
+  defaults?: {
+    read_only?: boolean
+    exclusive?: boolean
+  }
+}
+
+export interface SkillInfo {
+  name: string
+  description?: string
+  path: string
+  tags?: string
+  always?: boolean
+}
+
+export interface RequestedSkill {
+  name: string
+  source: 'slash'
+}
+
+export interface TokenStatsRow {
+  input?: number
+  output?: number
+  cache_read?: number
+  cache_create?: number
+  total?: number
+  calls?: number
+  provider?: string
+  model?: string
+  [key: string]: number | string | undefined
+}
+
+export interface TokenTotals extends TokenStatsRow {
+  total?: number
+  calls?: number
+}
+
+export interface MemoryPayload {
+  long_term?: string
+  today_episode?: string
+  episodes?: string[]
+  history?: HistoryStats
+  tokens?: Record<string, TokenStatsRow>
+  tokensByModel?: Record<string, TokenStatsRow>
+  tokensByUsageType?: Record<string, TokenStatsRow>
+  tokenTotals?: TokenTotals
+  runtime?: RuntimeStats
+}
+
+export interface RuntimeStats {
+  path?: string
+  bytes?: number
+  events?: number
+  latestSeq?: number
+  latestTs?: number | null
+  activeTurnEvents?: number
+  activeTurns?: number
+}
+
+export interface HistoryArchiveInfo {
+  path: string
+  bytes: number
+  updated_at?: string
+}
+
+export interface HistoryStats {
+  version?: number
+  latest_seq?: number
+  active_lines?: number
+  active_bytes?: number
+  archive_files?: number
+  archive_bytes?: number
+  archives?: HistoryArchiveInfo[]
+  last_archive_at?: string | null
+  migrated_at?: string | null
+  hot_limit_lines?: number
+  hot_limit_bytes?: number
+  needs_rotation?: boolean
+}
+
+export interface TokensStreak {
+  active_days: number
+  current_streak: number
+  longest_streak: number
+}
+
+export interface TokensPayload {
+  totals: TokenTotals
+  byDate: Record<string, TokenStatsRow>
+  byModel: Record<string, TokenStatsRow>
+  byUsageType: Record<string, TokenStatsRow>
+  byDateModel: Record<string, Record<string, TokenStatsRow>>
+  byHour: Record<string, TokenStatsRow>
+  streak: TokensStreak
+  sessions: number
+  messages: number
+  recentCalls?: TokenUsageRecord[]
+  recentCacheCalls?: TokenUsageRecord[]
+  generatedAt: string
+}
+
+export type TokensRange = 'all' | '30d' | '7d'
+export type TokensTab = 'overview' | 'models' | 'cache'
+
+export interface TokenUsageRecord {
+  ts: string
+  provider: string
+  model: string
+  model_role?: string
+  usage_type: string
+  input: number
+  output: number
+  cache_read: number
+  cache_create: number
+  total: number
+}
+
+export type ProviderRegion = 'foreign' | 'aggregator' | 'cloud' | 'cn' | 'local' | 'other'
+
+export interface ProviderOption {
+  name: string
+  displayName?: string
+  display_name?: string
+  backend?: string
+  defaultApiBase?: string
+  region?: ProviderRegion
+  isGateway?: boolean
+  isLocal?: boolean
+  isOauth?: boolean
+  isDirect?: boolean
+  thinkingStyle?: string | null
+}
+
+export interface ModelEntry {
+  name: string                     // 唯一 key（agents.defaults.model 引用）
+  id?: string                      // 兼容旧字段，等价于 mainModelId
+  mainModelId?: string             // 主模型 id：复杂任务 / 主 Agent
+  secondaryModelId?: string        // 次模型 id：简单任务 / 内部任务
+  provider: string                 // registry name
+  apiKey?: string | null           // "***last4" 占位 / 空 / 真值
+  apiBase?: string | null
+  extraHeaders?: Record<string, unknown> | null
+  extraBody?: Record<string, unknown> | null
+  maxTokens?: number | null
+  temperature?: number | null
+  contextWindowTokens?: number | null
+  reasoningEffort?: string | null
+  label?: string
+  supportsVision?: boolean         // 仅由"测试视觉"成功时自动 true；UI 用 👁 徽章渲染
+}
+
+export interface AttachmentRef {
+  id: string                       // "att_2026-05_abc12345"
+  name: string
+  mime: string
+  size: number
+  kind: 'image' | 'document' | 'text'
+  hasText: boolean
+  hasImage: boolean
+  path: string
+  textPath?: string | null
+}
+
+export interface ChatSendPayload {
+  content: string
+  attachments?: AttachmentRef[]
+  requestedSkills?: RequestedSkill[]
+  displayContent?: string
+}
+
+export interface ModelTestResult {
+  ok: boolean
+  kind: 'text' | 'vision'
+  latencyMs?: number
+  model?: string
+  modelRole?: string
+  provider?: string
+  sample?: string
+  finishReason?: string
+  error?: string
+  visionMarked?: boolean           // 视觉测试通过且后端已持久化 supportsVision
+}
+
+export interface AgentDefaults {
+  provider?: string | null
+  model?: string | null
+  maxTokens?: number | null
+  temperature?: number | null
+  reasoningEffort?: string | null
+  contextWindowTokens?: number | null
+}
+
+export interface ProviderConfig {
+  apiKey?: string | null
+  apiBase?: string | null
+  extraHeaders?: Record<string, unknown> | null
+  extraBody?: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
+export interface ModelConfigRaw {
+  agents?: {
+    defaults?: AgentDefaults
+    [key: string]: unknown
+  }
+  models?: ModelEntry[]
+  providers?: Record<string, ProviderConfig>
+  [key: string]: unknown
+}
+
+export interface CurrentModelConfig {
+  provider?: string | null
+  providerLabel?: string | null
+  model?: string | null
+  apiBase?: string | null
+  maxTokens?: number | null
+  temperature?: number | null
+  reasoningEffort?: string | null
+  contextWindowTokens?: number | null
+  entryName?: string | null
+  entryLabel?: string | null
+  supportsVision?: boolean
+  mainModelId?: string | null
+  secondaryModelId?: string | null
+  modelRole?: string | null
+}
+
+export interface ModelConfigPayload {
+  current?: CurrentModelConfig
+  secondary?: CurrentModelConfig | null
+  routing?: {
+    secondaryEnabled?: boolean
+    fallbackToMain?: boolean
+    mainEntry?: string | null
+    mainModel?: string | null
+    secondaryModel?: string | null
+  }
+  config?: ModelConfigRaw
+  providerOptions?: ProviderOption[]
+}
+
+export interface BootstrapPayload {
+  app: string
+  model?: string
+  provider?: string
+  providerLabel?: string
+  tools: ToolInfo[]
+  skills: SkillInfo[]
+  memory: MemoryPayload
+  modelConfig: ModelConfigPayload
+  team?: TeamPayload
+  control?: ControlPayload
+  runtime?: RuntimeReplayPayload
+  context_used?: number
+  unarchivedHistory?: RuntimeHistoryItem[]
+}
+
+export interface CompactResult {
+  status: 'compacted' | 'skipped'
+  count: number
+  message: string
+  memory: MemoryPayload
+  unarchivedHistory: RuntimeHistoryItem[]
+}
+
+export interface RuntimeHistoryItem {
+  role: 'user' | 'assistant'
+  content: string
+  attachments?: AttachmentRef[]
+  turn_id?: string
+}
+
+export interface RuntimeEventEnvelope {
+  event: string
+  seq?: number
+  ts?: number
+  turn_id?: string
+  client_message_id?: string
+  [key: string]: unknown
+}
+
+export interface RuntimeReplayPayload {
+  latestSeq: number
+  scope: 'unarchived' | string
+  events: RuntimeEventEnvelope[]
+}
+
+export type ToolStatus = 'running' | 'done' | 'error' | 'error_aborted'
+
+export interface TodoItem {
+  id: string | number
+  content: string
+  status: 'pending' | 'in_progress' | 'completed' | string
+}
+
+export interface TextSegment {
+  id: string
+  type: 'text'
+  content: string
+}
+
+export interface ToolSegment {
+  id: string
+  type: 'tool'
+  toolId?: string
+  name: string
+  arguments?: Record<string, unknown>
+  status: ToolStatus
+  summary?: string
+  subagents?: SubagentState[]
+  startedAt?: number
+  endedAt?: number
+  durationMs?: number
+}
+
+export interface ControlQuestionOption {
+  label: string
+  description?: string
+}
+
+export interface ControlQuestion {
+  id: string
+  header: string
+  question: string
+  options: ControlQuestionOption[]
+}
+
+export type ControlMode = 'ask_before_edit' | 'auto' | 'plan' | string
+export type InteractionKind = 'ask' | 'plan' | string
+export type InteractionStatus = 'waiting' | 'answered' | 'commented' | 'approved' | 'cancelled' | string
+
+export interface ControlInteraction {
+  id: string
+  kind: InteractionKind
+  status: InteractionStatus
+  created_at?: number
+  updated_at?: number
+  parent_call_id?: string | null
+  context?: string
+  questions?: ControlQuestion[]
+  answers?: Record<string, unknown>
+  title?: string
+  summary?: string
+  plan_markdown?: string
+  assumptions?: string[]
+  risk_level?: string
+  comments?: Array<{ content?: string; timestamp?: number }>
+  meta?: Record<string, unknown>
+}
+
+export interface ControlPayload {
+  version?: number
+  mode: ControlMode
+  previous_mode?: 'ask_before_edit' | 'auto' | null
+  pending?: ControlInteraction | null
+  last_interaction?: ControlInteraction | null
+  updated_at?: number
+}
+
+export interface AskSegment {
+  id: string
+  type: 'ask'
+  interaction: ControlInteraction
+}
+
+export interface PlanSegment {
+  id: string
+  type: 'plan'
+  interaction: ControlInteraction
+}
+
+export type AssistantSegment = TextSegment | ToolSegment | AskSegment | PlanSegment
+
+export interface SubagentToolState {
+  id?: string
+  name: string
+  arguments?: Record<string, unknown>
+  status: ToolStatus
+  summary?: string
+  startedAt?: number
+  endedAt?: number
+  durationMs?: number
+}
+
+export interface SubagentState {
+  id?: string
+  agent_type?: string
+  kind?: 'subagent' | 'team'
+  role?: string
+  purpose?: string
+  status: ToolStatus
+  content?: string
+  summary?: string
+  error?: string
+  tools?: SubagentToolState[]
+  messages?: TeamMessage[]
+  startedAt?: number
+  endedAt?: number
+  durationMs?: number
+}
+
+export interface UserMessage {
+  id: string
+  role: 'user'
+  content: string
+  attachments?: AttachmentRef[]
+  turn_id?: string
+  local?: boolean
+}
+
+export interface AssistantMessage {
+  id: string
+  role: 'assistant'
+  content: string
+  segments: AssistantSegment[]
+  todos?: TodoItem[] | null
+  streaming: boolean
+  turn_id?: string
+  local?: boolean
+}
+
+export type ChatMessage = UserMessage | AssistantMessage
+
+export interface PendingState {
+  label: string
+  detail: string
+  tone?: 'running' | 'done' | 'error'
+}
+
+export type RuntimeStatus = 'connecting' | 'ready' | 'error'
+
+export type TeamStatus = 'idle' | 'working' | 'offline' | 'shutdown' | 'error' | string
+
+export interface TeamMessage {
+  id: string
+  type: 'message' | 'task' | 'result' | 'status' | 'error' | string
+  from: string
+  to: string
+  content: string
+  timestamp: number
+  task_id?: string | null
+  in_reply_to?: string | null
+  meta?: Record<string, unknown>
+}
+
+export interface TeamMember {
+  name: string
+  role: string
+  agent_type: string
+  status: TeamStatus
+  created_at?: number
+  updated_at?: number
+  last_error?: string | null
+  unread?: number
+  recent_messages?: TeamMessage[]
+  thread_count?: number
+  tools?: string[]
+}
+
+export interface TeamPayload {
+  config?: {
+    version?: number
+    team_name?: string
+    members?: TeamMember[]
+  }
+  members: TeamMember[]
+  leadUnread?: number
+  leadInbox?: TeamMessage[]
+}
+
+export interface TeamMemberPayload {
+  member: TeamMember
+  inbox: TeamMessage[]
+  leadInbox: TeamMessage[]
+  thread: Array<{ role?: string; content?: string }>
+}
+
+export type WsEvent = ({ seq?: number; ts?: number; turn_id?: string; client_message_id?: string } & (
+  | { event: 'ready'; model?: string; provider?: string; latest_seq?: number; replay_count?: number; resume_from?: number; busy?: boolean; control?: ControlPayload }
+  | { event: 'user_message'; content?: string; attachments?: AttachmentRef[] }
+  | { event: 'message_delta'; delta?: string }
+  | { event: 'context_usage'; used?: number; max?: number; threshold?: number; usage_type?: string; model_role?: string; model?: string; provider?: string }
+  | { event: 'model_route_fallback'; from_model?: string; to_model?: string; reason?: string; usage_type?: string }
+  | { event: 'tool_call'; id?: string; name: string; arguments?: Record<string, unknown> }
+  | { event: 'tool_result'; id?: string; name?: string; summary?: string; todos?: TodoItem[] }
+  | { event: 'tool_error'; id?: string; name?: string; message?: string }
+  | { event: 'assistant_done'; content?: string }
+  | { event: 'error'; message?: string; partial?: boolean }
+  | { event: 'control_mode_update'; control?: ControlPayload }
+  | { event: 'ask_request'; interaction?: ControlInteraction }
+  | { event: 'ask_answered'; interaction?: ControlInteraction }
+  | { event: 'plan_draft'; interaction?: ControlInteraction }
+  | { event: 'plan_comment_added'; interaction?: ControlInteraction; comment?: string }
+  | { event: 'plan_approved'; interaction?: ControlInteraction; control?: ControlPayload }
+  | { event: 'interaction_cancelled'; interaction?: ControlInteraction; control?: ControlPayload }
+  | { event: 'turn_paused'; interaction?: ControlInteraction }
+  | { event: 'subagent_start'; parent_id?: string; subagent_id?: string; agent_type?: string; purpose?: string }
+  | { event: 'subagent_delta'; parent_id?: string; subagent_id?: string; agent_type?: string; delta?: string }
+  | { event: 'subagent_tool_call'; parent_id?: string; subagent_id?: string; id?: string; name: string; arguments?: Record<string, unknown> }
+  | { event: 'subagent_tool_result'; parent_id?: string; subagent_id?: string; id?: string; name?: string; summary?: string }
+  | { event: 'subagent_tool_error'; parent_id?: string; subagent_id?: string; id?: string; name?: string; message?: string }
+  | { event: 'subagent_done'; parent_id?: string; subagent_id?: string; agent_type?: string; summary?: string }
+  | { event: 'subagent_error'; parent_id?: string; subagent_id?: string; agent_type?: string; message?: string }
+  | { event: 'team_member_update'; member?: TeamMember }
+  | { event: 'team_message'; message?: TeamMessage }
+  | { event: 'team_run_start'; parent_id?: string; teammate?: string; role?: string; agent_type?: string; purpose?: string }
+  | { event: 'team_run_delta'; parent_id?: string; teammate?: string; delta?: string }
+  | { event: 'team_run_tool_call'; parent_id?: string; teammate?: string; id?: string; name: string; arguments?: Record<string, unknown> }
+  | { event: 'team_run_tool_result'; parent_id?: string; teammate?: string; id?: string; name?: string; summary?: string }
+  | { event: 'team_run_tool_error'; parent_id?: string; teammate?: string; id?: string; name?: string; message?: string }
+  | { event: 'team_run_done'; parent_id?: string; teammate?: string; summary?: string }
+  | { event: 'team_run_error'; parent_id?: string; teammate?: string; message?: string }
+))

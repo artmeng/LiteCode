@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from agent.runtime import RuntimeEventStore
+from agent.runtime import events as runtime_events
+
+
+def test_runtime_event_store_appends_and_recovers_seq(tmp_path: Path) -> None:
+    store = RuntimeEventStore(tmp_path)
+
+    first = store.append({"event": "user_message", "content": "hello"}, turn_id="turn_1")
+    second = store.append({"event": "tool_call", "name": "read_file"}, turn_id="turn_1")
+
+    assert first["seq"] == 1
+    assert second["seq"] == 2
+    assert second["turn_id"] == "turn_1"
+
+    restored = RuntimeEventStore(tmp_path)
+    assert restored.latest_seq == 2
+    assert [item["event"] for item in restored.replay_after(1)] == ["tool_call"]
+
+
+def test_runtime_event_store_filters_turns_and_skips_bad_lines(tmp_path: Path) -> None:
+    store = RuntimeEventStore(tmp_path)
+    store.append({"event": "user_message", "content": "a"}, turn_id="turn_a")
+    store.append({"event": "assistant_done", "content": "a"}, turn_id="turn_a")
+    store.append({"event": "user_message", "content": "b"}, turn_id="turn_b")
+    with store.events_file.open("a", encoding="utf-8") as f:
+        f.write("{bad json\n")
+        f.write(json.dumps({"seq": 99, "event": "assistant_done", "turn_id": "turn_b"}) + "\n")
+
+    events = store.events_for_turns(["turn_b"])
+
+    assert [event["event"] for event in events] == ["user_message", "assistant_done"]
+    assert all(event["turn_id"] == "turn_b" for event in events)
+
+
+def test_runtime_event_store_stats_include_active_turns(tmp_path: Path) -> None:
+    store = RuntimeEventStore(tmp_path)
+    store.append({"event": "user_message", "content": "a"}, turn_id="turn_a")
+    store.append({"event": "tool_call", "name": "read_file"}, turn_id="turn_a")
+    store.append({"event": "user_message", "content": "b"}, turn_id="turn_b")
+
+    stats = store.stats(active_turn_ids=["turn_a"])
+
+    assert stats["events"] == 3
+    assert stats["latestSeq"] == 3
+    assert stats["activeTurns"] == 1
+    assert stats["activeTurnEvents"] == 2
+    assert stats["path"] == "memory/runtime/events.jsonl"
+
+
+def test_scheduler_runtime_event_payloads() -> None:
+    job = {"id": "job-1", "name": "demo"}
+
+    assert runtime_events.scheduler_job_update(job, action="created") == {
+        "event": "scheduler_job_update",
+        "job": job,
+        "action": "created",
+    }
+    assert runtime_events.scheduler_run_start(job)["event"] == "scheduler_run_start"
+    assert runtime_events.scheduler_run_done(job)["event"] == "scheduler_run_done"
+    error = runtime_events.scheduler_run_error(job, error="boom")
+    assert error["event"] == "scheduler_run_error"
+    assert error["error"] == "boom"

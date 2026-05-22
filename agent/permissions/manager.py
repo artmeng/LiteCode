@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from ..control.tools import make_pause_result
+
+from .models import PermissionDecision
+from .policy import PermissionPolicy
+
+
+class PermissionManager:
+    def __init__(self, control_manager):
+        self.control_manager = control_manager
+        self.policy = PermissionPolicy()
+        self._approved_once: set[str] = set()
+        self._denied_once: set[str] = set()
+
+    def assess(self, tool_name: str, arguments: dict[str, Any] | None, *, registry=None) -> PermissionDecision:
+        args = arguments or {}
+        fingerprint = _fingerprint(tool_name, args)
+        if fingerprint in self._approved_once:
+            self._approved_once.remove(fingerprint)
+            return PermissionDecision.allow(tool_name=tool_name, arguments=args)
+        if fingerprint in self._denied_once:
+            self._denied_once.remove(fingerprint)
+            return PermissionDecision.deny(
+                tool_name=tool_name,
+                arguments=args,
+                reason="user denied this high-risk operation",
+            )
+        return self.policy.assess(tool_name, args, self.control_manager.mode, registry=registry)
+
+    def require_approval(
+        self,
+        decision: PermissionDecision,
+        *,
+        parent_call_id: str | None = None,
+    ) -> str:
+        interaction = self.control_manager.create_ask(
+            questions=[
+                {
+                    "id": "permission",
+                    "header": "权限",
+                    "question": f"是否允许执行高风险操作 `{decision.tool_name}`？",
+                    "options": [
+                        {"label": "允许", "description": "批准本次操作，Agent 可继续执行。"},
+                        {"label": "拒绝", "description": "不执行本次操作，让 Agent 改用更安全方案。"},
+                    ],
+                }
+            ],
+            context=self._context(decision),
+            parent_call_id=parent_call_id,
+            meta={
+                "permission": {
+                    "fingerprint": _fingerprint(decision.tool_name, decision.arguments or {}),
+                    "tool_name": decision.tool_name,
+                    "risk": decision.risk,
+                    "reason": decision.reason,
+                    "arguments": decision.arguments or {},
+                }
+            },
+        )
+        return make_pause_result(interaction.to_dict())
+
+    def record_answer(self, interaction) -> None:
+        permission = getattr(interaction, "meta", {}).get("permission") if getattr(interaction, "meta", None) else None
+        if not isinstance(permission, dict):
+            return
+        fingerprint = str(permission.get("fingerprint") or "")
+        if not fingerprint:
+            return
+        answer = interaction.answers.get("permission")
+        choice = ""
+        if isinstance(answer, dict):
+            choice = str(answer.get("choice") or answer.get("freeform") or "")
+        else:
+            choice = str(answer or "")
+        normalized = choice.strip().lower()
+        if "允许" in normalized or "approve" in normalized or "allow" in normalized or "yes" == normalized:
+            self._approved_once.add(fingerprint)
+            self._denied_once.discard(fingerprint)
+            return
+        self._denied_once.add(fingerprint)
+        self._approved_once.discard(fingerprint)
+
+    @staticmethod
+    def _context(decision: PermissionDecision) -> str:
+        return "\n".join([
+            "Permission Guard",
+            f"risk: {decision.risk}",
+            f"reason: {decision.reason}",
+            f"tool: {decision.tool_name}",
+            "arguments:",
+            json.dumps(decision.arguments or {}, ensure_ascii=False, indent=2)[:1600],
+        ])
+
+
+def _fingerprint(tool_name: str, arguments: dict[str, Any]) -> str:
+    try:
+        encoded = json.dumps(arguments or {}, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError):
+        encoded = json.dumps(_json_safe(arguments or {}), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return f"{tool_name}:{encoded}"
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)

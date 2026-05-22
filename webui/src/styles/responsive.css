@@ -1,0 +1,188 @@
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  }
+
+  .team-layout {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .team-detail {
+    grid-column: 1 / -1;
+    max-height: 22rem;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    @apply block space-y-4 p-3;
+  }
+
+  .nav-rail,
+  .main-view {
+    @apply relative top-auto h-auto min-h-0;
+  }
+
+  .nav-rail {
+    @apply gap-3;
+  }
+
+  .rail-actions {
+    @apply grid max-h-none grid-cols-2 overflow-visible pr-0;
+  }
+
+  .rail-metrics {
+    @apply grid-cols-4;
+  }
+
+  .main-view {
+    min-height: 78dvh;
+  }
+
+  .view-head {
+    @apply flex-col items-start;
+  }
+
+  .composer-wrap {
+    @apply sticky bottom-0 z-10;
+  }
+
+  .split-body,
+  .memory-body {
+    @apply grid-cols-1;
+  }
+
+  .memory-stats-grid {
+    @apply grid-cols-1;
+  }
+
+  .model-form,
+  .advanced-grid {
+    @apply grid-cols-1;
+  }
+
+  .model-form .span-2,
+  .advanced-grid .form-row.span-2,
+  .span-2 {
+    @apply col-span-1;
+  }
+
+  .entry-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .entry-list {
+    @apply max-h-48;
+  }
+
+  .team-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(22rem, 1fr) auto;
+  }
+
+  .team-roster {
+    max-height: 32rem;
+  }
+
+  .team-detail {
+    grid-column: auto;
+    max-height: none;
+  }
+
+  .team-action-row,
+  .team-form-row {
+    @apply grid-cols-1;
+  }
+
+  .bubble {
+    @apply max-w-[calc(100vw-6rem)] px-4;
+  }
+
+  .flow-body,
+  .message-cluster {
+    max-width: calc(100vw - 5.5rem);
+  }
+
+  .activity-summary,
+  .agent-node-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .activity-meta,
+  .agent-role-badge,
+  .agent-state-badge,
+  .agent-duration {
+    @apply col-start-2 justify-self-start;
+  }
+
+  .activity-body {
+    @apply px-3;
+  }
+
+  .agent-node-body {
+    @apply ml-0;
+  }
+
+  .pending-bar {
+    @apply mx-3;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .pending-label {
+    @apply col-start-2 justify-self-start;
+  }
+
+  .composer-action-row {
+    @apply flex-wrap items-start gap-y-2;
+  }
+
+  .slash-menu {
+    @apply max-h-[58vh] max-w-none;
+  }
+
+  .slash-menu-item {
+    @apply grid-cols-[minmax(6.5rem,0.8fr)_minmax(0,1fr)];
+  }
+
+  .slash-menu-item b {
+    @apply col-span-2 justify-self-start;
+  }
+
+  .composer-left-actions {
+    @apply order-1;
+  }
+
+  .composer-right-actions {
+    @apply order-2 w-full flex-1 flex-wrap;
+    flex-basis: 100%;
+  }
+
+  .mode-picker {
+    @apply min-w-0 flex-1;
+  }
+
+  .mode-button {
+    @apply w-full max-w-none;
+  }
+
+  .mode-menu {
+    @apply left-0 right-auto w-[min(22rem,calc(100vw-4rem))];
+  }
+
+  .attach-button,
+  .send-button,
+  .slash-hint-button {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-card.running .activity-status-dot,
+  .agent-node.running::before,
+  .pending-dot {
+    animation: none;
+  }
+}

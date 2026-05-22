@@ -1,0 +1,1553 @@
+  .panel-content {
+    @apply flex h-full min-h-0 flex-col gap-4 p-4;
+  }
+
+  .panel-toolbar {
+    @apply flex shrink-0 items-center gap-3;
+  }
+
+  .panel-toolbar input,
+  .panel-toolbar select {
+    @apply h-11 py-2;
+  }
+
+  .panel-scroll {
+    @apply min-h-0 flex-1 overflow-y-auto pr-1;
+  }
+
+  .team-panel {
+    @apply overflow-hidden;
+  }
+
+  .team-layout {
+    @apply grid h-full min-h-0 gap-4;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(260px, 340px);
+  }
+
+  .team-roster,
+  .team-timeline,
+  .team-detail {
+    @apply flex min-h-0 flex-col overflow-hidden rounded-[1.45rem] border border-line/70 bg-paper/70 shadow-insetPaper;
+  }
+
+  .team-section-head {
+    @apply flex shrink-0 items-center justify-between gap-3 border-b border-line/60 bg-paper2/45 px-4 py-3;
+  }
+
+  .team-section-head h2 {
+    @apply font-display text-lg font-black leading-tight text-ink;
+  }
+
+  .team-section-head p {
+    @apply mt-1 text-xs text-muted;
+  }
+
+  .team-member-list {
+    @apply flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3;
+  }
+
+  .team-member-row {
+    @apply flex min-h-[4.65rem] w-full items-center gap-3 rounded-[1.2rem] border border-line/55 bg-paper2/45 px-3 py-2 text-left transition hover:border-seal/30 hover:bg-paper/80;
+  }
+
+  .team-member-row.active {
+    @apply border-seal/35 bg-seal/10 shadow-insetPaper;
+  }
+
+  .team-member-row.working {
+    @apply border-amber/35 bg-amber/10;
+  }
+
+  .team-member-row.error {
+    @apply border-seal/35 bg-seal/10;
+  }
+
+  .team-member-row.shutdown,
+  .team-member-row.offline {
+    @apply opacity-70;
+  }
+
+  .team-member-row strong {
+    @apply block truncate font-display text-base font-black text-ink;
+  }
+
+  .team-member-row small {
+    @apply mt-0.5 block truncate font-mono text-[10px] text-muted;
+  }
+
+  .team-member-row em,
+  .team-status-pill {
+    @apply shrink-0 rounded-full border border-line/60 bg-paper px-2 py-1 text-[10px] not-italic text-muted;
+  }
+
+  .team-status-pill.working {
+    @apply border-amber/35 bg-amber/15 text-amber;
+  }
+
+  .team-status-pill.error,
+  .team-status-pill.shutdown {
+    @apply border-seal/35 bg-seal/10 text-seal;
+  }
+
+  .team-avatar {
+    @apply size-11 shrink-0 rounded-xl border border-line/60 bg-paper/80;
+    image-rendering: pixelated;
+  }
+
+  .team-create {
+    @apply flex shrink-0 flex-col gap-2 border-t border-line/60 bg-paper2/35 p-3;
+  }
+
+  .team-form-row {
+    @apply grid grid-cols-[minmax(0,1fr)_minmax(7rem,0.72fr)] gap-2;
+  }
+
+  .team-create input,
+  .team-create select,
+  .team-create textarea,
+  .team-detail textarea {
+    @apply rounded-[1rem] px-3 py-2 text-xs;
+  }
+
+  .team-timeline {
+    @apply bg-paper/60;
+  }
+
+  .team-message-scroll {
+    @apply min-h-0 flex-1 space-y-3 overflow-y-auto p-4;
+    background:
+      linear-gradient(90deg, transparent, rgb(var(--line) / 0.08) 49%, rgb(var(--line) / 0.08) 51%, transparent),
+      radial-gradient(circle at 50% 0%, rgb(var(--amber) / 0.08), transparent 28rem);
+  }
+
+  .team-message {
+    @apply rounded-[1.15rem] border border-line/60 bg-paper/80 px-4 py-3 text-sm shadow-sm;
+  }
+
+  .team-message.to-lead {
+    @apply border-jade/25 bg-jade/10;
+  }
+
+  .team-message.task,
+  .team-message.to-member {
+    @apply border-amber/25 bg-amber/10;
+  }
+
+  .team-message.error {
+    @apply border-seal/30 bg-seal/10;
+  }
+
+  .team-message-top {
+    @apply flex items-center justify-between gap-3 text-xs;
+  }
+
+  .team-message-top strong {
+    @apply min-w-0 truncate font-display text-sm font-black text-ink;
+  }
+
+  .team-message-top span {
+    @apply shrink-0 font-mono text-[10px] text-muted;
+  }
+
+  .team-message p {
+    @apply mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-ink;
+  }
+
+  .team-empty {
+    @apply grid h-full min-h-[16rem] place-items-center rounded-[1.35rem] border border-dashed border-line/70 bg-paper2/35 text-sm text-muted;
+  }
+
+  .team-empty img {
+    @apply mb-3 size-24 opacity-75;
+    image-rendering: pixelated;
+  }
+
+  .team-detail-body {
+    @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4;
+  }
+
+  .team-detail-body.muted {
+    @apply justify-center text-center text-muted;
+  }
+
+  .team-stamp {
+    @apply flex items-center gap-3 rounded-[1.25rem] border border-line/60 bg-paper2/45 p-3;
+  }
+
+  .team-stamp img {
+    @apply size-16 shrink-0 rounded-[1.05rem] border border-line/60 bg-paper/80;
+    image-rendering: pixelated;
+  }
+
+  .team-stamp strong {
+    @apply block truncate font-display text-xl font-black text-ink;
+  }
+
+  .team-stamp span {
+    @apply mt-1 block font-mono text-xs text-muted;
+  }
+
+  .team-tool-cloud {
+    @apply flex max-h-44 flex-wrap gap-2 overflow-y-auto rounded-[1.2rem] border border-line/60 bg-paper2/35 p-3;
+  }
+
+  .team-tool-cloud span {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-line/55 bg-paper/70 px-2.5 py-1 font-mono text-[10px] text-muted;
+  }
+
+  .team-tool-cloud img {
+    @apply size-4 shrink-0;
+    image-rendering: pixelated;
+  }
+
+  .team-action-row {
+    @apply grid grid-cols-3 gap-2;
+  }
+
+  .team-action-row .tool-button {
+    @apply min-h-11 rounded-[1rem] px-2 text-xs;
+  }
+
+  .team-error {
+    @apply rounded-[1rem] border border-seal/30 bg-seal/10 px-3 py-2 text-xs leading-6 text-seal;
+  }
+
+  .model-form {
+    @apply grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-y-auto pr-1;
+  }
+
+  .model-form label {
+    @apply flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted;
+  }
+
+  .model-form .span-2,
+  .span-2 {
+    @apply col-span-2;
+  }
+
+  /* ── ModelPanel v2: simplified vertical layout + advanced collapse ── */
+  .model-form-v2 {
+    @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1;
+  }
+
+  .model-form-v2 .form-row {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .model-form-v2 .form-row.span-2 {
+    @apply col-span-2;
+  }
+
+  .model-form-v2 .form-label {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-muted;
+  }
+
+  .model-form-v2 .form-input,
+  .model-form-v2 .form-select {
+    @apply rounded-2xl border border-line/70 bg-paper2/50 px-3 py-2 text-sm text-ink shadow-insetPaper;
+  }
+
+  .model-form-v2 .form-select option {
+    @apply bg-paper text-ink;
+  }
+
+  .advanced-panel {
+    @apply mt-2 rounded-[1.4rem] border border-line/70 bg-paper2/40 p-3 shadow-insetPaper;
+  }
+
+  .advanced-panel[open] {
+    @apply bg-paper2/60;
+  }
+
+  .advanced-toggle {
+    @apply flex cursor-pointer items-baseline justify-between gap-3 px-1 py-1 font-display text-sm font-bold text-ink;
+    list-style: none;
+  }
+
+  .advanced-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .advanced-toggle small {
+    @apply font-mono text-[10px] font-normal uppercase tracking-[0.12em] text-muted;
+  }
+
+  .advanced-grid {
+    @apply mt-3 grid grid-cols-2 gap-3;
+  }
+
+  .advanced-grid .form-row.span-2 {
+    @apply col-span-2;
+  }
+
+  .advanced-grid textarea {
+    @apply rounded-2xl border border-line/70 bg-paper/60 px-3 py-2 font-mono text-xs leading-5 text-ink shadow-insetPaper;
+  }
+
+  /* ── ModelPanel v3: 多条目布局 ── */
+  .model-panel-shell {
+    @apply relative;
+  }
+
+  .entry-layout {
+    @apply grid min-h-0 flex-1 gap-4 overflow-hidden;
+    grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  }
+
+  .entry-list-pane {
+    @apply flex min-h-0 flex-col gap-3 overflow-hidden;
+  }
+
+  .entry-list-head {
+    @apply flex shrink-0 items-end justify-between gap-3 px-1;
+  }
+
+  .entry-list-title {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .entry-list-title span {
+    @apply font-display text-sm font-bold text-ink;
+  }
+
+  .entry-list-title small {
+    @apply font-mono text-[10px] uppercase tracking-[0.12em] text-muted;
+  }
+
+  .tool-button.compact {
+    @apply px-3 py-1 text-xs;
+  }
+
+  .entry-list {
+    @apply flex min-h-0 flex-col gap-2 overflow-y-auto pr-1;
+  }
+
+  /* ── 底部 sticky 操作栏 ── */
+  .model-action-bar {
+    @apply sticky bottom-0 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.4rem] border border-line/70 bg-paper2/85 px-4 py-3 shadow-imperial backdrop-blur;
+    z-index: 10;
+  }
+
+  .model-action-bar.dirty {
+    @apply border-amber/40 bg-amber/10;
+  }
+
+  .action-bar-status {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .dirty-badge {
+    @apply inline-flex items-center gap-1 rounded-full border border-amber/40 bg-amber/15 px-3 py-1 font-mono text-xs font-bold text-amber;
+  }
+
+  .saved-badge {
+    @apply inline-flex items-center gap-1 rounded-full border border-jade/30 bg-jade/10 px-3 py-1 font-mono text-xs font-bold text-jade;
+  }
+
+  .save-action[disabled] {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .entry-item {
+    @apply flex cursor-pointer items-start gap-3 rounded-[1.25rem] border border-line/70 bg-paper/60 p-3 transition hover:border-seal/30 hover:bg-paper;
+  }
+
+  .entry-item.active {
+    @apply border-ink/40 bg-paper2/80 shadow-insetPaper;
+  }
+
+  .entry-item.default {
+    @apply border-seal/30 bg-seal/5;
+  }
+
+  .entry-item.active.default {
+    @apply border-seal/50 bg-seal/10;
+  }
+
+  .entry-meta {
+    @apply min-w-0 flex-1;
+  }
+
+  .entry-active-badge {
+    @apply inline-flex shrink-0 items-center rounded-full border border-jade/40 bg-jade/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-jade;
+  }
+
+  .entry-activate-btn {
+    @apply shrink-0 rounded-full border border-line/70 bg-paper px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted opacity-0 transition hover:border-seal/40 hover:text-seal;
+  }
+
+  /* hover 任意条目时露出激活按钮；当前编辑也露出，方便快速切 */
+  .entry-item:hover .entry-activate-btn,
+  .entry-item.active .entry-activate-btn {
+    @apply opacity-100;
+  }
+
+  .entry-active-inline {
+    @apply inline-flex shrink-0 items-center rounded-full border border-jade/40 bg-jade/15 px-3 py-1 font-mono text-xs font-bold text-jade;
+  }
+
+  .entry-editor-title {
+    @apply flex min-w-0 flex-wrap items-center gap-3;
+  }
+
+  .entry-title {
+    @apply truncate font-display text-sm font-bold text-ink;
+  }
+
+  .entry-sub {
+    @apply mt-1 truncate font-mono text-[11px] text-muted;
+  }
+
+  .entry-sub code {
+    @apply rounded bg-paper2 px-1 py-0.5;
+  }
+
+  .entry-editor {
+    @apply flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[1.4rem] border border-line/70 bg-paper2/40 p-4 shadow-insetPaper;
+  }
+
+  .entry-editor-head {
+    @apply flex items-center justify-between gap-3 border-b border-line/60 pb-3;
+  }
+
+  .entry-editor-head h3 {
+    @apply truncate font-display text-base font-bold text-ink;
+  }
+
+  .tool-button.danger {
+    @apply border-seal/50 bg-seal/10 text-seal hover:border-seal hover:bg-seal hover:text-paper;
+  }
+
+  .split-panel {
+    @apply min-h-0;
+  }
+
+  .split-body {
+    @apply grid min-h-0 flex-1 grid-cols-[minmax(150px,0.9fr)_minmax(0,1.25fr)] gap-3 overflow-hidden;
+  }
+
+  .compact-split {
+    @apply gap-3;
+  }
+
+  .resource-list {
+    @apply min-h-0 space-y-2 overflow-y-auto pr-1;
+  }
+
+  .list-item {
+    @apply flex w-full items-start justify-between gap-4 rounded-[1.25rem] border border-line/60 bg-paper/60 p-4 transition hover:border-seal/30 hover:bg-paper;
+  }
+
+  .resource-icon {
+    @apply size-14 shrink-0 rounded-[1.15rem] border border-line/50 bg-paper2/70 p-1.5 shadow-sm;
+    transform: scale(1.14);
+  }
+
+  .tool-card .resource-icon {
+    @apply size-16;
+    transform: scale(1.18);
+  }
+
+  .list-item.active {
+    @apply border-seal/30 bg-seal/10;
+  }
+
+  .item-title {
+    @apply truncate font-mono text-xs font-bold text-ink;
+  }
+
+  .item-desc {
+    @apply mt-1 line-clamp-2 text-xs leading-5 text-muted;
+  }
+
+  .badge-row {
+    @apply flex shrink-0 flex-wrap justify-end gap-1;
+  }
+
+  .badge {
+    @apply rounded-full border border-line/70 bg-paper2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted;
+  }
+
+  .badge.green {
+    @apply border-jade/25 bg-jade/10 text-jade;
+  }
+
+  .badge.red {
+    @apply border-seal/25 bg-seal/10 text-seal;
+  }
+
+  .badge.gold {
+    @apply border-amber/30 bg-amber/10 text-amber;
+  }
+
+  .filter-wrap {
+    @apply relative flex-1;
+  }
+
+  .filter-wrap input {
+    @apply w-full pr-20;
+  }
+
+  .filter-badge {
+    @apply pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-paper2 px-2 py-0.5 font-mono text-[10px] font-bold text-muted;
+  }
+
+  .editor {
+    @apply flex min-h-0 flex-col overflow-hidden rounded-[1.4rem] border border-line/70 bg-paper/70 shadow-insetPaper;
+  }
+
+  .editor-title {
+    @apply shrink-0 border-b border-line/70 bg-paper2/60 px-4 py-3 font-mono text-xs font-bold text-muted;
+  }
+
+  .editor textarea {
+    @apply min-h-0 flex-1 rounded-none border-0 bg-transparent font-mono text-xs leading-6 shadow-none focus:ring-0;
+  }
+
+  .editor-actions {
+    @apply flex shrink-0 items-center justify-between gap-2 border-t border-line/70 p-3;
+  }
+
+  .skill-editor-header {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .skill-editor-meta {
+    @apply flex items-center gap-2;
+  }
+
+  .skill-editor-name {
+    @apply font-display text-sm font-black text-ink;
+  }
+
+  .skill-editor-file {
+    @apply rounded-full bg-paper2 px-2 py-0.5 font-mono text-[10px] text-muted;
+  }
+
+  .skill-editor-badges {
+    @apply flex shrink-0 flex-wrap items-center gap-1;
+  }
+
+  .empty-state {
+    @apply grid min-h-48 place-items-center rounded-[1.5rem] border border-dashed border-line/80 bg-paper/50 p-6 text-center text-sm leading-7 text-muted;
+  }
+
+  .illustrated-empty {
+    @apply gap-3;
+  }
+
+  .illustrated-empty img {
+    @apply mx-auto max-h-44 max-w-48 opacity-90 drop-shadow-md;
+    image-rendering: pixelated;
+    transform: scale(1.08);
+  }
+
+  .compact-illustration {
+    @apply flex min-h-0 items-center justify-start text-left;
+  }
+
+  .compact-illustration img {
+    @apply mx-0 size-20 shrink-0;
+    transform: scale(1.14);
+  }
+
+  .seal-empty img {
+    @apply max-h-36 max-w-36;
+    transform: scale(1.12);
+  }
+
+  .empty-note {
+    @apply rounded-[1.2rem] border border-line/60 bg-paper2/50 p-3 text-xs leading-6 text-muted;
+  }
+
+  .empty-note.compact {
+    @apply p-2;
+  }
+
+  .note-mark {
+    @apply mr-3 inline-block size-11 align-middle;
+    transform: scale(1.22);
+  }
+
+  .usage-board {
+    @apply relative overflow-hidden rounded-[1.7rem] border border-seal/20 bg-seal/95 p-5 text-paper shadow-lg shadow-seal/20;
+  }
+
+  .usage-board::after {
+    content: '';
+    @apply pointer-events-none absolute -bottom-16 -right-10 size-44 rounded-full bg-paper/10;
+  }
+
+  .usage-mark {
+    @apply absolute right-5 top-4 size-24 opacity-35;
+    transform: scale(1.22);
+  }
+
+  .usage-total span {
+    @apply text-xs uppercase tracking-[0.18em] text-paper/70;
+  }
+
+  .usage-total strong {
+    @apply block font-display text-5xl font-black leading-none;
+  }
+
+  .usage-total small {
+    @apply mt-3 block text-xs text-paper/70;
+  }
+
+  .usage-grid {
+    @apply grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto pr-1;
+  }
+
+  .usage-card {
+    @apply rounded-[1.35rem] border border-line/70 bg-paper/70 p-3;
+  }
+
+  .usage-card-title {
+    @apply mb-2 font-display text-sm font-bold text-ink;
+  }
+
+  .usage-table {
+    @apply space-y-2;
+  }
+
+  .usage-row {
+    @apply flex items-center justify-between gap-3 rounded-2xl bg-paper2/60 px-3 py-2;
+  }
+
+  .usage-row strong,
+  .usage-row span {
+    @apply block;
+  }
+
+  .usage-row span {
+    @apply text-[11px] text-muted;
+  }
+
+  .usage-number {
+    @apply shrink-0 font-mono text-sm font-bold text-seal;
+  }
+
+  .memory-body {
+    @apply grid-cols-[minmax(0,1.2fr)_minmax(150px,0.8fr)];
+  }
+
+  .section-label {
+    @apply px-2 py-1 font-display text-sm font-bold text-ink;
+  }
+
+  .loading-shell {
+    @apply grid min-h-dvh place-items-center gap-5 bg-paper-grain p-8 text-center;
+  }
+
+  .loading-shell > .seal {
+    @apply size-20 rounded-[1.6rem] text-4xl;
+  }
+
+  .error-panel {
+    @apply h-auto max-w-xl p-0;
+  }
+
+  .toast {
+    @apply pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full border border-line/70 bg-ink px-5 py-3 text-sm text-paper opacity-0 shadow-imperial transition;
+  }
+
+  .toast.show {
+    @apply translate-y-0 opacity-100;
+  }
+
+  /* ----------------------- Tokens view (Overview + Models) ----------------------- */
+
+  .tokens-head {
+    @apply flex-wrap;
+  }
+
+  .tokens-controls {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .tokens-pill-group {
+    @apply inline-flex items-center gap-1 rounded-full border border-line/60 bg-paper/70 p-1;
+  }
+
+  .tokens-pill {
+    @apply rounded-full px-3 py-1 text-xs font-semibold text-muted transition;
+  }
+
+  .tokens-pill[data-active='true'] {
+    @apply bg-seal text-paper shadow;
+  }
+
+  .tokens-pill:not([data-active='true']):hover {
+    @apply text-seal;
+  }
+
+  .tokens-body {
+    @apply overflow-y-auto px-6 py-5;
+  }
+
+  .tokens-overview {
+    @apply flex flex-col gap-5;
+  }
+
+  .stat-grid {
+    @apply grid gap-3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 720px) {
+    .stat-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .stat-card {
+    @apply relative overflow-hidden rounded-[1.35rem] border border-line/70 bg-paper/80 px-4 py-3 shadow-sm;
+  }
+
+  .stat-card::after {
+    content: '';
+    @apply pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-seal/5;
+  }
+
+  .stat-card-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted;
+  }
+
+  .stat-card-value {
+    @apply mt-2 block font-display text-2xl font-black text-ink;
+    word-break: break-word;
+  }
+
+  .stat-card-value.compact-value {
+    @apply whitespace-nowrap font-mono text-[1.95rem] tracking-normal;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-card-value.compact-value[data-tone='hit'] {
+    @apply text-jade;
+  }
+
+  .stat-card-value.compact-value[data-tone='miss'] {
+    @apply text-seal;
+  }
+
+  .stat-card-value.compact-value[data-tone='output'] {
+    @apply text-amber;
+  }
+
+  .stat-card-hint {
+    @apply mt-1 block text-[11px] text-muted;
+  }
+
+  .activity-heatmap-card {
+    @apply rounded-[1.6rem] border border-line/70 bg-paper/85 p-4;
+  }
+
+  .heatmap-head {
+    @apply mb-3 flex flex-wrap items-center justify-between gap-2 font-display text-sm font-bold text-ink;
+  }
+
+  .heatmap-legend {
+    @apply inline-flex items-center gap-1 text-[11px] text-muted;
+  }
+
+  .heatmap-legend em {
+    @apply not-italic;
+  }
+
+  .legend-cell {
+    @apply inline-block size-3 rounded-[3px];
+    background: rgb(var(--seal) / 0.08);
+  }
+
+  .legend-cell[data-level='1'] { background: rgb(var(--seal) / 0.22); }
+  .legend-cell[data-level='2'] { background: rgb(var(--seal) / 0.42); }
+  .legend-cell[data-level='3'] { background: rgb(var(--seal) / 0.65); }
+  .legend-cell[data-level='4'] { background: rgb(var(--seal) / 0.92); }
+
+  .heatmap-frame {
+    @apply overflow-x-auto;
+  }
+
+  .heatmap-months {
+    @apply mb-1 grid pl-7 text-[10px] text-muted;
+    column-gap: 0;
+  }
+
+  .heatmap-months span {
+    @apply col-span-3 truncate;
+  }
+
+  .heatmap-body {
+    @apply flex items-start gap-1.5;
+  }
+
+  .heatmap-weekdays {
+    @apply grid w-6 text-[10px] text-muted;
+    grid-template-rows: repeat(7, 14px);
+    row-gap: 2px;
+  }
+
+  .heatmap-weekdays span {
+    @apply leading-[14px];
+  }
+
+  .heatmap-grid {
+    @apply grid;
+    column-gap: 2px;
+  }
+
+  .heatmap-col {
+    @apply grid;
+    grid-template-rows: repeat(7, 14px);
+    row-gap: 2px;
+  }
+
+  .heatmap-cell {
+    @apply rounded-[3px];
+    width: 14px;
+    height: 14px;
+    background: rgb(var(--seal) / 0.08);
+    transition: transform 120ms ease;
+  }
+
+  .heatmap-cell[data-level='1'] { background: rgb(var(--seal) / 0.22); }
+  .heatmap-cell[data-level='2'] { background: rgb(var(--seal) / 0.42); }
+  .heatmap-cell[data-level='3'] { background: rgb(var(--seal) / 0.65); }
+  .heatmap-cell[data-level='4'] { background: rgb(var(--seal) / 0.92); }
+  .heatmap-cell[data-empty='1'] { background: transparent; }
+
+  .heatmap-cell:hover {
+    transform: scale(1.18);
+    outline: 1px solid rgb(var(--ink) / 0.45);
+  }
+
+  /* ----------------------- Models sub panel ----------------------- */
+
+  .tokens-models {
+    @apply flex flex-col gap-5;
+  }
+
+  .model-bars-card {
+    @apply relative rounded-[1.6rem] border border-line/70 bg-paper/85 p-4;
+  }
+
+  .bars-head {
+    @apply mb-3 flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .bars-head strong {
+    @apply font-display text-sm font-bold text-ink;
+  }
+
+  .bars-head p {
+    @apply mt-1 text-[11px] text-muted;
+  }
+
+  .bars-legend {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .legend-item {
+    @apply inline-flex items-center gap-1.5 text-[11px] text-ink;
+  }
+
+  .legend-swatch {
+    @apply inline-block size-3 rounded-sm;
+  }
+
+  .bars-frame {
+    @apply relative;
+  }
+
+  .bars-grid-lines {
+    @apply pointer-events-none absolute inset-x-0 inset-y-0 flex flex-col justify-between;
+  }
+
+  .bars-grid-lines span {
+    @apply block h-px w-full;
+    background: rgb(var(--line) / 0.4);
+  }
+
+  .model-bars {
+    @apply relative flex items-end gap-[2px] overflow-hidden rounded-xl px-2;
+    height: 240px;
+  }
+
+  .model-bar {
+    @apply relative flex h-full flex-1 cursor-pointer items-end outline-none;
+    min-width: 4px;
+  }
+
+  .model-bar.empty {
+    @apply opacity-30;
+  }
+
+  .model-bar:hover .model-bar-fill,
+  .model-bar.active .model-bar-fill,
+  .model-bar:focus .model-bar-fill {
+    filter: brightness(1.08);
+    box-shadow: inset 0 0 0 1px rgb(var(--ink) / 0.35);
+  }
+
+  .model-bar-fill {
+    @apply flex w-full flex-col-reverse overflow-hidden rounded-md;
+    min-height: 1px;
+    background: rgb(var(--seal) / 0.08);
+  }
+
+  .model-bar-segment {
+    @apply block;
+    min-height: 1px;
+  }
+
+  .bar-tooltip {
+    @apply pointer-events-none absolute -top-3 z-10 -translate-x-1/2 -translate-y-full rounded-2xl border border-line/70 bg-ink/95 px-3 py-2 text-[11px] text-paper shadow-lg;
+    min-width: 180px;
+  }
+
+  .bar-tooltip strong {
+    @apply block font-mono text-[12px];
+  }
+
+  .bar-tooltip ul {
+    @apply mt-1 space-y-1;
+  }
+
+  .bar-tooltip li {
+    @apply flex items-center gap-2;
+  }
+
+  .bar-tooltip li span {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .bar-tooltip li em {
+    @apply not-italic font-mono text-[11px] text-paper/90;
+  }
+
+  .tooltip-swatch {
+    @apply inline-block size-2.5 shrink-0 rounded-sm;
+  }
+
+  .bar-tooltip footer {
+    @apply mt-2 border-t border-paper/15 pt-1 text-[10px] uppercase tracking-[0.16em] text-paper/70;
+  }
+
+  .bars-axis {
+    @apply relative mt-2 h-4 text-[10px] text-muted;
+  }
+
+  .bars-axis span {
+    @apply absolute -translate-x-1/2 whitespace-nowrap;
+  }
+
+  /* ----------------------- Model list ----------------------- */
+
+  .model-list-card {
+    @apply rounded-[1.6rem] border border-line/70 bg-paper/85 p-4;
+  }
+
+  .list-head {
+    @apply mb-3 flex items-baseline justify-between gap-2;
+  }
+
+  .list-head strong {
+    @apply font-display text-sm font-bold text-ink;
+  }
+
+  .list-head small {
+    @apply text-[11px] text-muted;
+  }
+
+  .model-list {
+    @apply w-full text-sm;
+    border-collapse: collapse;
+  }
+
+  .model-list th {
+    @apply border-b border-line/60 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+
+  .model-list th.num,
+  .model-list td.num {
+    @apply text-right font-mono;
+  }
+
+  .model-list th.sortable {
+    @apply cursor-pointer select-none transition hover:text-seal;
+  }
+
+  .model-list td {
+    @apply border-b border-line/30 px-3 py-2 align-middle text-ink;
+  }
+
+  .model-list td small {
+    @apply block text-[11px] text-muted;
+  }
+
+  .row-model {
+    @apply block truncate font-display text-[13px];
+  }
+
+  .col-rank {
+    @apply w-12 text-center;
+  }
+
+  .col-rank .row-swatch {
+    @apply mr-1.5 inline-block size-2.5 rounded-sm align-middle;
+  }
+
+  .col-share {
+    @apply w-36;
+  }
+
+  .col-share em {
+    @apply mt-1 block text-right text-[11px] not-italic font-mono text-muted;
+  }
+
+  .model-list-bar {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-paper2/70;
+  }
+
+  .model-list-bar span {
+    @apply block h-full;
+    background: linear-gradient(90deg, rgb(var(--seal)) 0%, rgb(var(--amber)) 100%);
+  }
+
+  .model-list td.num.strong {
+    @apply font-bold text-seal;
+  }
+
+  .model-list .cache-col {
+    @apply min-w-[8.5rem];
+  }
+
+  .model-list .cache-value {
+    @apply text-jade;
+  }
+
+  .model-list .cache-value.create {
+    @apply text-amber;
+  }
+
+  .model-list .cache-value.miss {
+    @apply text-seal;
+  }
+
+  /* ----------------------- Token cache panel ----------------------- */
+
+  .tokens-cache {
+    @apply flex flex-col gap-5;
+  }
+
+  .cache-stat-grid {
+    @apply lg:grid-cols-4;
+  }
+
+  .cache-stat-card::after {
+    @apply bg-jade/10;
+  }
+
+  .token-composition-card,
+  .cache-composition-card,
+  .cache-trend-card,
+  .cache-list-card,
+  .cache-recent-card {
+    @apply rounded-[1.6rem] border border-line/70 bg-paper/85 p-4;
+  }
+
+  .cache-section-head {
+    @apply mb-3 flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .cache-section-head.compact {
+    @apply items-baseline;
+  }
+
+  .cache-section-head strong {
+    @apply font-display text-sm font-bold text-ink;
+  }
+
+  .cache-section-head p {
+    @apply mt-1 text-[11px] text-muted;
+  }
+
+  .cache-section-head span {
+    @apply rounded-full border border-line/60 bg-paper2/70 px-2.5 py-1 font-mono text-[11px] font-bold text-jade;
+  }
+
+  .cache-meter {
+    @apply flex h-7 w-full overflow-hidden rounded-xl border border-line/50 bg-paper2/80;
+  }
+
+  .cache-meter span {
+    @apply block h-full min-w-1 transition-[width];
+  }
+
+  .cache-legend {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  .cache-legend span {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line/50 bg-paper/70 px-2.5 py-1 text-[11px] text-muted;
+  }
+
+  .cache-legend i {
+    @apply inline-block size-2.5 rounded-sm;
+  }
+
+  .cache-legend em {
+    @apply not-italic;
+  }
+
+  .cache-legend strong {
+    @apply font-mono text-ink;
+  }
+
+  .token-composition-meter {
+    @apply flex h-7 w-full overflow-hidden rounded-xl border border-line/50 bg-paper2/80;
+  }
+
+  .token-composition-meter span {
+    @apply block h-full min-w-1 transition-[width];
+  }
+
+  .token-composition-legend {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  .token-composition-legend span {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line/50 bg-paper/70 px-2.5 py-1 text-[11px] text-muted;
+  }
+
+  .token-composition-legend i {
+    @apply inline-block size-2.5 rounded-sm;
+  }
+
+  .token-composition-legend em {
+    @apply not-italic;
+  }
+
+  .token-composition-legend strong {
+    @apply font-mono text-ink;
+  }
+
+  .tokens-quick-grid {
+    @apply mt-4 grid gap-2;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  }
+
+  .tokens-quick-grid span {
+    @apply rounded-xl border border-line/40 bg-paper2/45 px-3 py-2;
+  }
+
+  .tokens-quick-grid em {
+    @apply block truncate text-[10px] not-italic uppercase tracking-[0.14em] text-muted;
+  }
+
+  .tokens-quick-grid strong {
+    @apply mt-1 block truncate font-mono text-sm font-bold text-ink;
+  }
+
+  .cache-trend-frame {
+    @apply overflow-x-auto;
+  }
+
+  .cache-trend-bars {
+    @apply flex h-44 min-w-[36rem] items-end gap-1 rounded-xl border border-line/40 bg-paper2/40 px-3 py-3;
+  }
+
+  .cache-trend-bar {
+    @apply flex h-full flex-1 items-end justify-center gap-[2px] rounded-md bg-paper/50 px-[2px];
+    min-width: 8px;
+  }
+
+  .cache-trend-bar.empty {
+    @apply opacity-35;
+  }
+
+  .cache-trend-bar span {
+    @apply block w-full max-w-3 rounded-t-sm;
+    min-height: 1px;
+  }
+
+  .cache-trend-bar .read {
+    @apply bg-jade;
+  }
+
+  .cache-trend-bar .create {
+    @apply bg-amber;
+  }
+
+  .cache-trend-axis {
+    @apply mt-2 flex min-w-[36rem] justify-between px-3 font-mono text-[10px] text-muted;
+  }
+
+  .cache-split-grid {
+    @apply grid gap-5 xl:grid-cols-2;
+  }
+
+  .cache-rank-list {
+    @apply space-y-2;
+  }
+
+  .cache-rank-row {
+    @apply grid items-center gap-3 rounded-xl border border-line/30 bg-paper2/45 px-3 py-2;
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(5rem, 0.32fr);
+  }
+
+  .cache-rank-row > i {
+    @apply inline-block size-3 rounded-sm;
+  }
+
+  .cache-rank-row strong {
+    @apply block truncate font-display text-[13px] text-ink;
+  }
+
+  .cache-rank-row small {
+    @apply block truncate text-[11px] text-muted;
+  }
+
+  .cache-rank-row em {
+    @apply font-mono text-xs not-italic text-jade;
+  }
+
+  .cache-rank-row > span {
+    @apply h-1.5 overflow-hidden rounded-full bg-paper/80;
+  }
+
+  .cache-rank-row > span b {
+    @apply block h-full rounded-full bg-jade;
+  }
+
+  .cache-table-wrap {
+    @apply overflow-x-auto;
+  }
+
+  .cache-table {
+    @apply w-full min-w-[760px] text-sm;
+    border-collapse: collapse;
+  }
+
+  .cache-table th {
+    @apply border-b border-line/60 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+
+  .cache-table td {
+    @apply border-b border-line/30 px-3 py-2 align-middle text-ink;
+  }
+
+  .cache-table td.mono,
+  .cache-table .num {
+    @apply font-mono;
+  }
+
+  .cache-table .num {
+    @apply text-right;
+  }
+
+  .cache-table .read {
+    @apply text-jade;
+  }
+
+  .cache-table .create {
+    @apply text-amber;
+  }
+
+  .cache-table .miss {
+    @apply text-seal;
+  }
+
+  .cache-table .strong {
+    @apply font-bold text-seal;
+  }
+
+
+/* ─── 附件 chip：草稿条 + 用户气泡通用 ─── */
+
+  .composer-shell.composer-drag-active {
+    @apply ring-2 ring-seal/40 ring-offset-2 ring-offset-paper;
+  }
+
+  .composer-drafts {
+    @apply mb-2 flex flex-wrap gap-2;
+  }
+
+  .hidden-file-input {
+    display: none;
+  }
+
+  .attach-chip {
+    @apply inline-flex items-center gap-2 rounded-xl border border-line/60 bg-paper/80 px-2 py-1.5 shadow-sm;
+    max-width: 16rem;
+  }
+  .attach-chip.is-image .attach-thumb {
+    @apply h-12 w-12 rounded-lg object-cover;
+    flex-shrink: 0;
+  }
+  .attach-chip .attach-doc-icon {
+    @apply grid h-12 w-12 place-items-center rounded-lg border border-line/45 bg-paper2;
+    flex-shrink: 0;
+  }
+  .attach-chip .attach-doc-icon img {
+    @apply h-9 w-9;
+    transform: scale(1.08);
+  }
+  .attach-chip.uploading {
+    @apply border-amber/40 bg-amber/10;
+  }
+  .attach-chip .attach-meta {
+    @apply min-w-0 flex-1 leading-tight;
+  }
+  .attach-chip .attach-name {
+    @apply truncate font-mono text-xs font-bold text-ink;
+  }
+  .attach-chip .attach-sub {
+    @apply truncate font-mono text-[10px] text-muted;
+  }
+  .attach-chip .attach-remove {
+    @apply ml-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-paper2 text-base text-muted transition;
+  }
+  .attach-chip .attach-remove:hover {
+    @apply bg-seal/15 text-seal;
+  }
+
+  /* 用户消息气泡上方的 attach 行 */
+  .user-attach-row {
+    @apply mb-2 flex flex-wrap justify-end gap-2;
+  }
+
+  /* ModelPanel: 视觉徽章 + 连通测试 */
+  .entry-title {
+    @apply flex items-center gap-2;
+  }
+  .entry-vision-eye {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-full border border-jade/40 bg-jade/10 leading-none text-jade shadow-sm;
+    cursor: help;
+  }
+  .entry-vision-eye img {
+    @apply h-5 w-5;
+    transform: scale(1.2);
+  }
+
+  .test-row {
+    @apply mt-3 flex flex-col gap-2 rounded-[1.25rem] border border-line/60 bg-paper2/50 p-3;
+  }
+  .test-label {
+    @apply flex flex-col gap-0.5;
+  }
+  .test-label > span {
+    @apply font-mono text-xs font-bold uppercase tracking-wide text-muted;
+  }
+  .test-label .hint {
+    @apply text-xs text-muted;
+  }
+  .test-actions {
+    @apply flex flex-wrap gap-2;
+  }
+  .model-test-button {
+    @apply min-h-11 gap-2 rounded-[1rem] px-3.5;
+  }
+  .model-test-icon {
+    @apply h-7 w-7;
+    transform: scale(1.16);
+  }
+  .test-result {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border px-2.5 py-1.5 font-mono text-xs;
+  }
+  .test-result.ok {
+    @apply border-jade/40 bg-jade/10;
+  }
+  .test-result.fail {
+    @apply border-amber/40 bg-amber/10;
+  }
+  .test-result .badge {
+    @apply font-bold;
+  }
+  .test-result .badge.with-icon {
+    @apply inline-flex items-center gap-1.5;
+  }
+  .test-result .badge img {
+    @apply h-6 w-6;
+    transform: scale(1.18);
+  }
+  .test-result.ok .badge {
+    @apply text-jade;
+  }
+  .test-result.fail .badge {
+    @apply text-amber;
+  }
+  .test-result .meta {
+    @apply text-muted;
+  }
+  .test-result .meta.jade {
+    @apply text-jade;
+  }
+  .test-result .sample {
+    @apply max-w-[20rem] truncate rounded bg-paper px-1.5 py-0.5 text-ink;
+  }
+
+
+
+  .tool-card-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2;
+  }
+
+  .tool-card {
+    @apply flex flex-col gap-3 rounded-[1.25rem] border border-line/60 bg-paper/70 p-4 shadow-sm transition-all duration-200;
+  }
+
+  .tool-card:hover {
+    @apply border-seal/30 bg-paper shadow-md;
+  }
+
+  .tool-card-head {
+    @apply flex items-start gap-3;
+  }
+
+  .tool-card-icon {
+    @apply shrink-0 rounded-xl;
+  }
+
+  .tool-card-name {
+    @apply text-sm font-bold text-ink;
+  }
+
+  .tool-card-desc {
+    @apply mt-0.5 text-xs leading-5 text-muted;
+  }
+
+  .tool-badge-row {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .tool-param-section {
+    @apply mt-1;
+  }
+
+  .tool-param-toggle {
+    @apply flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-ink;
+  }
+
+  .tool-param-caret {
+    @apply inline-block text-[10px] transition-transform;
+  }
+
+  .tool-param-caret.open {
+    @apply rotate-180;
+  }
+
+  .tool-param-list {
+    @apply mt-2 flex flex-wrap gap-1.5;
+  }
+
+  .tool-param-chip {
+    @apply inline-flex rounded-md bg-paper2/80 px-2 py-0.5 text-[11px] text-muted ring-1 ring-line/50;
+  }
+
+  .tool-empty {
+    @apply md:col-span-2;
+  }
+
+  .skill-card-grid {
+    @apply grid grid-cols-1 gap-3;
+  }
+
+  .skill-card {
+    @apply relative flex flex-col gap-2 rounded-[1.25rem] border border-line/60 bg-paper/70 p-4 shadow-sm transition-all duration-200 cursor-pointer;
+  }
+
+  .skill-card:hover {
+    @apply border-seal/25 bg-paper shadow-md;
+  }
+
+  .skill-card.active {
+    @apply border-seal/30 bg-seal/[0.06];
+  }
+
+  .skill-card-head {
+    @apply flex items-start gap-3;
+  }
+
+  .skill-card-icon {
+    @apply shrink-0;
+  }
+
+  .skill-card-name {
+    @apply text-sm font-bold text-ink;
+  }
+
+  .skill-card-desc {
+    @apply mt-0.5 text-xs leading-5 text-muted;
+  }
+
+  .skill-badge-row {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .skill-card-path {
+    @apply truncate font-mono text-[10px] text-muted/60;
+  }
+
+  .skill-delete {
+    @apply absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-sm text-muted opacity-0 transition-opacity hover:bg-red-50 hover:text-seal;
+  }
+
+  .skill-card:hover .skill-delete {
+    @apply opacity-100;
+  }
+
+  .skill-preview {
+    @apply min-h-0 flex-1 overflow-y-auto rounded-none border-0 bg-paper px-4 py-3 text-sm leading-6 shadow-none;
+  }
+
+  .preview-toggle {
+    @apply cursor-pointer transition-colors hover:bg-seal/10;
+  }
+
+  .preview-toggle.active {
+    @apply bg-seal/15 text-seal;
+  }
+
+  .memory-tabs {
+    @apply inline-flex items-center gap-1 rounded-full border border-line/60 bg-paper/70 p-1;
+  }
+
+  .memory-tab {
+    @apply rounded-full px-3.5 py-1.5 text-xs font-semibold text-muted transition;
+  }
+
+  .memory-tab[data-active='true'] {
+    @apply bg-seal text-paper shadow-sm;
+  }
+
+  .memory-tab:not([data-active='true']):hover {
+    @apply text-seal;
+  }
+
+  .memory-stats-grid {
+    @apply grid shrink-0 grid-cols-3 gap-3;
+  }
+
+  .memory-stat-card {
+    @apply min-w-0 rounded-lg border border-line/70 bg-paper/75 px-3 py-2 shadow-sm;
+  }
+
+  .memory-stat-card.warning {
+    @apply border-amber/50 bg-amber/10;
+  }
+
+  .memory-stat-card span,
+  .memory-stat-card small {
+    @apply block truncate text-[11px] font-semibold text-muted;
+  }
+
+  .memory-stat-card strong {
+    @apply block truncate font-mono text-base font-black text-ink;
+  }
+
+  .episode-card {
+    @apply cursor-pointer;
+  }

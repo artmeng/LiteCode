@@ -1,0 +1,1006 @@
+import { computed, reactive, ref, watch, type Ref } from 'vue'
+import type { AssistantMessage, AttachmentRef, BootstrapPayload, ChatMessage, ChatSendPayload, ControlInteraction, PendingState, RuntimeEventEnvelope, RuntimeHistoryItem, RuntimeStatus, SubagentState, TeamMessage, ToolSegment, ToolStatus, WsEvent } from '../types'
+import {
+  clearRuntimeSnapshotRaw,
+  IN_FLIGHT_MAX_AGE_MS,
+  readRuntimeSnapshotRaw,
+  RUNTIME_MAX_AGE_MS,
+  writeRuntimeSnapshotRaw,
+} from '../runtime/persistence'
+import { replayRuntimeEvents } from '../runtime/reducer'
+import { findSubagent, findSubagentTool, findToolSegment } from '../runtime/selectors'
+
+function nextId(prefix: string) {
+  const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return `${prefix}-${random}`
+}
+
+function compactJson(value: unknown, limit = 180) {
+  if (!value || typeof value !== 'object') return ''
+  const text = JSON.stringify(value)
+  return text.length > limit ? `${text.slice(0, limit)}...` : text
+}
+
+export function useRuntime(options: {
+  boot: Ref<BootstrapPayload | null>
+  refreshMemory: (shouldToast?: boolean) => Promise<void>
+  showToast: (message: string) => void
+}) {
+  const messages = ref<ChatMessage[]>([])
+  const busy = ref(false)
+  const status = ref<RuntimeStatus>('connecting')
+  const currentAssistantId = ref<string | null>(null)
+  const pending = reactive<PendingState>({ label: '', detail: '' })
+  const reconnectAttempts = ref(0)
+  const socket = ref<WebSocket | null>(null)
+  const lastSeq = ref(0)
+  let reconnectTimer: number | undefined
+  let rehydrating = false
+
+  const currentAssistant = computed(() => messages.value.find((message) => message.id === currentAssistantId.value && message.role === 'assistant') as AssistantMessage | undefined)
+
+  watch(
+    [messages, currentAssistantId, busy, lastSeq],
+    persistRuntimeSnapshot,
+    { deep: true },
+  )
+
+  function runtimeText() {
+    if (busy.value) return '正在办差'
+    if (status.value === 'ready') return '流式在线'
+    if (status.value === 'error') return '连接异常'
+    return '连接中'
+  }
+
+  function updatePending(label = '', detail = '', tone: PendingState['tone'] = 'running') {
+    pending.label = label
+    pending.detail = detail
+    pending.tone = label ? tone : undefined
+  }
+
+  function connectSocket() {
+    const active = socket.value
+    if (active && (active.readyState === WebSocket.OPEN || active.readyState === WebSocket.CONNECTING)) return
+    status.value = 'connecting'
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const params = new URLSearchParams({ last_seq: String(lastSeq.value) })
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws?${params.toString()}`)
+    socket.value = ws
+
+    ws.addEventListener('open', () => {
+      status.value = 'ready'
+      reconnectAttempts.value = 0
+      if (reconnectTimer) window.clearTimeout(reconnectTimer)
+    })
+    ws.addEventListener('message', (event) => handleSocketEvent(event.data))
+    ws.addEventListener('close', () => {
+      status.value = 'error'
+      if (currentAssistant.value?.streaming) {
+        busy.value = true
+        updatePending('WebSocket 断开，正在续接回复...', `已收到事件 #${lastSeq.value}`)
+      } else {
+        busy.value = false
+        updatePending()
+        currentAssistantId.value = null
+      }
+      scheduleReconnect()
+    })
+    ws.addEventListener('error', () => {
+      status.value = 'error'
+    })
+  }
+
+  function scheduleReconnect() {
+    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts.value), 30000)
+    reconnectAttempts.value += 1
+    options.showToast(`WebSocket 已断开，${Math.round(delay / 1000)} 秒后重连`)
+    if (reconnectTimer) window.clearTimeout(reconnectTimer)
+    reconnectTimer = window.setTimeout(() => {
+      status.value = 'connecting'
+      connectSocket()
+    }, delay)
+  }
+
+  function sendMessage(payload: string | ChatSendPayload) {
+    const normalized = typeof payload === 'string'
+      ? { content: payload, attachments: [] as AttachmentRef[], requestedSkills: [], displayContent: payload }
+      : {
+        content: payload.content,
+        attachments: payload.attachments || [],
+        requestedSkills: payload.requestedSkills || [],
+        displayContent: payload.displayContent || payload.content,
+      }
+    const text = normalized.content.trim()
+    const displayText = normalized.displayContent.trim()
+    const attachments = normalized.attachments
+    if (busy.value) return false
+    if (!text && attachments.length === 0) return false
+    if (!socket.value || socket.value.readyState !== WebSocket.OPEN) {
+      connectSocket()
+      options.showToast('WebSocket 还没连上，请稍后再发')
+      return false
+    }
+
+    const assistantId = nextId('assistant')
+    const userMsg: ChatMessage = {
+      id: nextId('user'),
+      role: 'user',
+      content: displayText || text,
+    }
+    if (attachments.length) userMsg.attachments = attachments
+    messages.value.push(userMsg)
+    messages.value.push({ id: assistantId, role: 'assistant', content: '', segments: [], todos: null, streaming: true })
+    currentAssistantId.value = assistantId
+    busy.value = true
+    status.value = 'ready'
+
+    try {
+      socket.value.send(JSON.stringify({
+        type: 'message',
+        content: text,
+        attachments: attachments.map((a) => a.id),
+        requested_skills: normalized.requestedSkills,
+        display_content: displayText !== text ? displayText : undefined,
+        client_message_id: userMsg.id,
+      }))
+      return true
+    } catch (err) {
+      handleChatError(err instanceof Error ? err.message : String(err))
+      return false
+    }
+  }
+
+  function sendInteractionAnswer(interactionId: string, answers: Record<string, unknown>) {
+    return sendControlPayload(
+      { type: 'interaction_answer', interaction_id: interactionId, answers },
+      '已回答澄清问题',
+      true,
+    )
+  }
+
+  function sendPlanComment(interactionId: string, comment: string) {
+    const text = comment.trim()
+    if (!text) return false
+    return sendControlPayload(
+      { type: 'plan_comment', interaction_id: interactionId, comment: text },
+      `评论计划：${text.slice(0, 80)}`,
+      true,
+    )
+  }
+
+  function approvePlan(interactionId: string) {
+    return sendControlPayload(
+      { type: 'plan_approve', interaction_id: interactionId },
+      '批准计划，开始执行',
+      true,
+    )
+  }
+
+  function cancelInteraction(interactionId: string) {
+    return sendControlPayload(
+      { type: 'interaction_cancel', interaction_id: interactionId },
+      '已取消等待中的交互',
+      false,
+    )
+  }
+
+  function sendControlPayload(payload: Record<string, unknown>, userLabel: string, expectAssistant: boolean) {
+    if (busy.value) return false
+    if (!socket.value || socket.value.readyState !== WebSocket.OPEN) {
+      connectSocket()
+      options.showToast('WebSocket 还没连上，请稍后再试')
+      return false
+    }
+    const userId = nextId('user')
+    messages.value.push({ id: userId, role: 'user', content: userLabel })
+    if (expectAssistant) {
+      const assistantId = nextId('assistant')
+      messages.value.push({ id: assistantId, role: 'assistant', content: '', segments: [], todos: null, streaming: true })
+      currentAssistantId.value = assistantId
+      busy.value = true
+      updatePending('正在继续执行...', userLabel)
+    }
+    try {
+      socket.value.send(JSON.stringify({ ...payload, client_message_id: userId }))
+      return true
+    } catch (err) {
+      handleChatError(err instanceof Error ? err.message : String(err))
+      return false
+    }
+  }
+
+  function clearChat() {
+    messages.value = []
+    currentAssistantId.value = null
+    busy.value = false
+    updatePending()
+    clearRuntimeSnapshot()
+    options.showToast('当前屏幕已清空')
+  }
+
+  function addLocalCommand(command: string, content: string) {
+    messages.value.push({
+      id: nextId('command'),
+      role: 'user',
+      content: command,
+      local: true,
+    })
+    messages.value.push({
+      id: nextId('command-result'),
+      role: 'assistant',
+      content,
+      segments: content ? [{ id: nextId('segment'), type: 'text', content }] : [],
+      todos: null,
+      streaming: false,
+      local: true,
+    })
+  }
+
+  function restoreFromHistory(history: RuntimeHistoryItem[] = []) {
+    const runtimeEvents = options.boot.value?.runtime?.events || []
+    if (runtimeEvents.length) {
+      restoreFromRuntimeEvents(runtimeEvents)
+      return
+    }
+    const snapshot = loadRuntimeSnapshot(history)
+    if (snapshot) {
+      messages.value = snapshot.messages
+      currentAssistantId.value = snapshot.currentAssistantId
+      busy.value = Boolean(snapshot.currentAssistantId)
+      lastSeq.value = snapshot.lastSeq
+      if (busy.value) updatePending('正在恢复刷新前的回复...', `已收到事件 #${lastSeq.value}`)
+      return
+    }
+
+    messages.value = history
+      .filter((item) => item.role === 'user' || item.role === 'assistant')
+      .map((item) => {
+        if (item.role === 'user') {
+          const msg: ChatMessage = {
+            id: nextId('user'),
+            role: 'user',
+            content: item.content,
+          }
+          if (item.attachments?.length) msg.attachments = item.attachments
+          return msg
+        }
+        return {
+          id: nextId('assistant'),
+          role: 'assistant',
+          content: item.content,
+          segments: item.content ? [{ id: nextId('segment'), type: 'text', content: item.content }] : [],
+          todos: null,
+          streaming: false,
+        } satisfies ChatMessage
+      })
+  }
+
+  function restoreFromRuntimeEvents(events: RuntimeEventEnvelope[]) {
+    messages.value = []
+    currentAssistantId.value = null
+    busy.value = false
+    updatePending()
+    lastSeq.value = 0
+    rehydrating = true
+    try {
+      replayRuntimeEvents(events, ({ event }) => handleSocketEvent(JSON.stringify(event)))
+    } finally {
+      rehydrating = false
+    }
+    lastSeq.value = Math.max(lastSeq.value, Number(options.boot.value?.runtime?.latestSeq || 0))
+    const assistant = currentAssistant.value
+    busy.value = Boolean(assistant?.streaming)
+  }
+
+  function handleSocketEvent(raw: string) {
+    let data: WsEvent
+    try {
+      data = JSON.parse(raw) as WsEvent
+    } catch {
+      handleChatError('WebSocket 返回了无法解析的数据')
+      return
+    }
+
+    if (data.event === 'ready') {
+      handleReadyEvent(data)
+      return
+    }
+
+    if (typeof data.seq === 'number' && data.seq > 0) {
+      if (data.seq <= lastSeq.value) return
+      lastSeq.value = data.seq
+    }
+
+    if (data.event === 'user_message') {
+      handleUserMessageEvent(data)
+      return
+    }
+
+    if (data.event === 'message_delta') {
+      const assistant = assistantForEvent(data)
+      if (assistant) {
+        const delta = data.delta || ''
+        assistant.content += delta
+        const last = assistant.segments[assistant.segments.length - 1]
+        if (last?.type === 'text') {
+          last.content += delta
+        } else {
+          assistant.segments.push({ id: nextId('segment'), type: 'text', content: delta })
+        }
+      }
+      updatePending('AI 正在思量...', '')
+      return
+    }
+
+    if (data.event === 'context_usage') {
+      if (!data.usage_type || data.usage_type === 'main_agent') {
+        const used = Math.max(0, Number(data.used || 0))
+        const max = Math.max(0, Number(data.max || 0))
+        if (options.boot.value) {
+          options.boot.value.context_used = used
+          if (max && options.boot.value.modelConfig?.current) {
+            options.boot.value.modelConfig.current.contextWindowTokens = max
+          }
+        }
+      }
+      return
+    }
+
+    if (data.event === 'tool_call') {
+      const assistant = assistantForEvent(data)
+      if (assistant) {
+        const startedAt = Date.now()
+        assistant.segments.push({
+          id: nextId('segment'),
+          type: 'tool',
+          toolId: data.id,
+          name: data.name,
+          arguments: data.arguments || {},
+          status: 'running',
+          summary: '',
+          subagents: [],
+          startedAt,
+        })
+      }
+      updatePending(`正在执行: ${data.name}`, compactJson(data.arguments))
+      return
+    }
+
+    if (data.event === 'tool_result') {
+      const assistant = assistantForEvent(data, false)
+      const seg = findToolSegment(assistant, data.id)
+      if (seg) {
+        finishTimedState(seg)
+        seg.summary = data.summary || '已完成'
+        seg.status = 'done'
+        if (data.name === 'update_todos' && data.todos) assistant!.todos = data.todos
+      }
+      const running = (assistant?.segments || []).filter((seg): seg is ToolSegment => seg.type === 'tool' && seg.status === 'running')
+      if (running.length) updatePending(`正在执行: ${running[0].name}`, `剩余 ${running.length} 个工具`)
+      return
+    }
+
+    if (data.event === 'tool_error') {
+      const assistant = assistantForEvent(data, false)
+      const seg = findToolSegment(assistant, data.id)
+      if (seg) {
+        finishTimedState(seg)
+        seg.status = 'error'
+        seg.summary = data.message || '工具执行出错'
+      }
+      updatePending(`工具 ${data.name || ''} 执行出错`, data.message || '', 'error')
+      return
+    }
+
+    if (data.event === 'assistant_done') {
+      const assistant = assistantForEvent(data, false) || currentAssistant.value
+      if (assistant) {
+        assistant.content = data.content || assistant.content
+        assistant.streaming = false
+      }
+      currentAssistantId.value = null
+      busy.value = false
+      status.value = 'ready'
+      updatePending()
+      if (!rehydrating) void options.refreshMemory(false)
+      return
+    }
+
+    if (data.event === 'control_mode_update') {
+      if (options.boot.value && data.control) options.boot.value.control = data.control
+      return
+    }
+
+    if (data.event === 'ask_request' || data.event === 'plan_draft') {
+      handleControlDraft(data)
+      return
+    }
+
+    if (
+      data.event === 'ask_answered' ||
+      data.event === 'plan_comment_added' ||
+      data.event === 'plan_approved' ||
+      data.event === 'interaction_cancelled'
+    ) {
+      if ('control' in data && data.control && options.boot.value) options.boot.value.control = data.control
+      if (data.interaction) updateControlSegment(data.interaction)
+      if (data.event === 'plan_approved') updatePending('计划已批准，开始执行', '', 'done')
+      if (data.event === 'interaction_cancelled') updatePending('已取消等待', '', 'done')
+      return
+    }
+
+    if (data.event === 'turn_paused') {
+      const assistant = assistantForEvent(data, false) || currentAssistant.value
+      if (assistant) assistant.streaming = false
+      currentAssistantId.value = null
+      busy.value = false
+      status.value = 'ready'
+      updatePending('等待你定夺', data.interaction?.kind === 'plan' ? '计划待预览' : '问题待回答', 'done')
+      return
+    }
+
+    if (data.event === 'error') {
+      updatePending()
+      handleChatError(data.message || '未知错误')
+      return
+    }
+
+    if (data.event.startsWith('team_')) {
+      handleTeamEvent(data)
+      return
+    }
+
+    handleSubagentEvent(data)
+  }
+
+  function handleUserMessageEvent(data: Extract<WsEvent, { event: 'user_message' }>) {
+    const turnId = data.turn_id || ''
+    const clientId = data.client_message_id || ''
+    const existing = messages.value.find((message) =>
+      message.role === 'user' && (
+        (clientId && message.id === clientId) ||
+        (turnId && message.turn_id === turnId)
+      )
+    )
+    if (existing && existing.role === 'user') {
+      existing.turn_id = turnId || existing.turn_id
+      existing.content = data.content || existing.content
+      existing.attachments = data.attachments || existing.attachments
+      return
+    }
+    const msg: ChatMessage = {
+      id: clientId || nextId('user'),
+      role: 'user',
+      content: data.content || '',
+      turn_id: turnId || undefined,
+    }
+    if (data.attachments?.length) msg.attachments = data.attachments
+    messages.value.push(msg)
+  }
+
+  function assistantForEvent(data?: { turn_id?: string }, create = true): AssistantMessage | undefined {
+    const turnId = data?.turn_id || ''
+    if (turnId) {
+      const existing = messages.value.find((message): message is AssistantMessage =>
+        message.role === 'assistant' && message.turn_id === turnId
+      )
+      if (existing) {
+        currentAssistantId.value = existing.id
+        return existing
+      }
+      const current = currentAssistant.value
+      if (current && !current.turn_id) {
+        current.turn_id = turnId
+        return current
+      }
+      if (!create) return undefined
+      return createAssistantForIncomingControl(turnId)
+    }
+    return create ? (currentAssistant.value || createAssistantForIncomingControl()) : currentAssistant.value
+  }
+
+  function handleReadyEvent(data: Extract<WsEvent, { event: 'ready' }>) {
+    status.value = 'ready'
+    const latestSeq = Number(data.latest_seq || 0)
+    const serverRestarted = lastSeq.value > 0 && latestSeq < lastSeq.value
+    const hasReplay = Number(data.replay_count || 0) > 0
+
+    if (serverRestarted) {
+      lastSeq.value = latestSeq
+      if (currentAssistant.value?.streaming) {
+        finishInterruptedAssistant(currentAssistant.value, '（服务重启后无法续接上一条回复，请重新发送。）')
+        currentAssistantId.value = null
+        busy.value = false
+        updatePending()
+        options.showToast('服务已重启，上一条未完成回复已停止，请重新发送。')
+      }
+    } else if (currentAssistant.value?.streaming && !data.busy && !hasReplay) {
+      finishInterruptedAssistant(currentAssistant.value, '（连接已恢复，但后端没有正在运行的回复，请重新发送。）')
+      currentAssistantId.value = null
+      busy.value = false
+      updatePending()
+    }
+
+    if (options.boot.value) {
+      options.boot.value.model = data.model || options.boot.value.model
+      options.boot.value.provider = data.provider || options.boot.value.provider
+      if (data.control) options.boot.value.control = data.control
+    }
+    if (!serverRestarted && currentAssistant.value?.streaming && hasReplay) {
+      updatePending('WebSocket 已重连，正在补齐回复...', `回放 ${data.replay_count} 个事件`)
+    }
+  }
+
+  function handleControlDraft(data: Extract<WsEvent, { event: 'ask_request' | 'plan_draft' }>) {
+    if (!data.interaction) return
+    if (options.boot.value) {
+      options.boot.value.control ||= { mode: 'ask_before_edit', pending: null }
+      options.boot.value.control.pending = data.interaction
+    }
+    const assistant = assistantForEvent(data)
+    if (!assistant) return
+    const type = data.event === 'ask_request' ? 'ask' : 'plan'
+    const existing = assistant.segments.find((seg) =>
+      (seg.type === 'ask' || seg.type === 'plan') && seg.interaction.id === data.interaction!.id
+    )
+    if (existing && (existing.type === 'ask' || existing.type === 'plan')) {
+      existing.interaction = data.interaction
+    } else {
+      assistant.segments.push({ id: nextId(type), type, interaction: data.interaction })
+    }
+    updatePending(type === 'plan' ? '计划待预览' : '等待你回答', data.interaction.title || data.interaction.context || '', 'done')
+  }
+
+  function createAssistantForIncomingControl(turnId = '') {
+    const assistantId = nextId('assistant')
+    const assistant: AssistantMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      segments: [],
+      todos: null,
+      streaming: true,
+      turn_id: turnId || undefined,
+    }
+    messages.value.push(assistant)
+    currentAssistantId.value = assistantId
+    return assistant
+  }
+
+  function updateControlSegment(interaction: ControlInteraction) {
+    for (const message of messages.value) {
+      if (message.role !== 'assistant') continue
+      for (const segment of message.segments) {
+        if ((segment.type === 'ask' || segment.type === 'plan') && segment.interaction.id === interaction.id) {
+          segment.interaction = interaction
+        }
+      }
+    }
+  }
+
+  function handleSubagentEvent(data: WsEvent) {
+    const assistant = assistantForEvent(data, false)
+    if (!assistant) return
+
+    if (data.event === 'subagent_start') {
+      const seg = findToolSegment(assistant, data.parent_id)
+      if (seg) {
+        seg.subagents ||= []
+        seg.subagents.push({
+          id: data.subagent_id,
+          agent_type: data.agent_type,
+          kind: 'subagent',
+          purpose: data.purpose,
+          status: 'running',
+          content: '',
+          tools: [],
+          startedAt: Date.now(),
+        })
+      }
+      updatePending(`派遣执行代理: ${data.agent_type || 'subagent'}`, data.purpose || '')
+      return
+    }
+
+    if (data.event === 'subagent_delta') {
+      const sub = findSubagent(assistant, data.parent_id, data.subagent_id)
+      if (sub) sub.content = `${sub.content || ''}${data.delta || ''}`
+      updatePending(`执行代理 ${data.agent_type || 'subagent'} 处理中...`, '')
+      return
+    }
+
+    if (data.event === 'subagent_tool_call') {
+      const sub = findSubagent(assistant, data.parent_id, data.subagent_id)
+      if (sub) {
+        sub.tools ||= []
+        sub.tools.push({ id: data.id, name: data.name, arguments: data.arguments || {}, status: 'running', startedAt: Date.now() })
+      }
+      updatePending(`执行代理调用: ${data.name}`, '')
+      return
+    }
+
+    if (data.event === 'subagent_tool_result') {
+      const tool = findSubagentTool(assistant, data.parent_id, data.subagent_id, data.id)
+      if (tool) {
+        finishTimedState(tool)
+        tool.summary = data.summary || '已完成'
+        tool.status = 'done'
+      }
+      return
+    }
+
+    if (data.event === 'subagent_tool_error') {
+      const tool = findSubagentTool(assistant, data.parent_id, data.subagent_id, data.id)
+      if (tool) {
+        finishTimedState(tool)
+        tool.summary = data.message || '工具执行出错'
+        tool.status = 'error'
+      }
+      updatePending(`执行代理工具 ${data.name || ''} 出错`, data.message || '', 'error')
+      return
+    }
+
+    if (data.event === 'subagent_done') {
+      const sub = findSubagent(assistant, data.parent_id, data.subagent_id)
+      if (sub) {
+        finishTimedState(sub)
+        sub.status = 'done'
+        sub.summary = data.summary
+      }
+      updatePending('AI 正在整理结果...', '')
+      return
+    }
+
+    if (data.event === 'subagent_error') {
+      const sub = findSubagent(assistant, data.parent_id, data.subagent_id)
+      if (sub) {
+        finishTimedState(sub)
+        sub.status = 'error'
+        sub.error = data.message
+      }
+      updatePending(`执行代理 ${data.agent_type || ''} 出错`, data.message || '', 'error')
+    }
+  }
+
+  function handleTeamEvent(data: WsEvent) {
+    updateTeamBootstrap(data)
+    const assistant = assistantForEvent(data, false)
+
+    if (data.event === 'team_member_update') {
+      updatePending(data.member?.status === 'working' ? `队友 ${data.member.name} 正在办差` : '', '')
+      return
+    }
+
+    if (data.event === 'team_message') {
+      if (assistant && data.message) {
+        attachTeamMessage(assistant, data.message)
+      }
+      if (data.message?.to === 'lead') updatePending('队友有新回禀', data.message.from, 'done')
+      return
+    }
+
+    if (!assistant) return
+
+    if (data.event === 'team_run_start') {
+      const seg = findToolSegment(assistant, data.parent_id)
+      if (seg) {
+        seg.subagents ||= []
+        seg.subagents.push({
+          id: data.teammate,
+          kind: 'team',
+          agent_type: data.agent_type,
+          role: data.role,
+          purpose: data.purpose,
+          status: 'running',
+          content: '',
+          tools: [],
+          messages: [],
+          startedAt: Date.now(),
+        })
+      }
+      updatePending(`队友 ${data.teammate || ''} 已唤醒`, data.purpose || '')
+      return
+    }
+
+    if (data.event === 'team_run_delta') {
+      const sub = findSubagent(assistant, data.parent_id, data.teammate)
+      if (sub) sub.content = `${sub.content || ''}${data.delta || ''}`
+      updatePending(`队友 ${data.teammate || ''} 处理中...`, '')
+      return
+    }
+
+    if (data.event === 'team_run_tool_call') {
+      const sub = findSubagent(assistant, data.parent_id, data.teammate)
+      if (sub) {
+        sub.tools ||= []
+        sub.tools.push({ id: data.id, name: data.name, arguments: data.arguments || {}, status: 'running', startedAt: Date.now() })
+      }
+      updatePending(`队友调用: ${data.name}`, data.teammate || '')
+      return
+    }
+
+    if (data.event === 'team_run_tool_result') {
+      const tool = findSubagentTool(assistant, data.parent_id, data.teammate, data.id)
+      if (tool) {
+        finishTimedState(tool)
+        tool.summary = data.summary || '已完成'
+        tool.status = 'done'
+      }
+      return
+    }
+
+    if (data.event === 'team_run_tool_error') {
+      const tool = findSubagentTool(assistant, data.parent_id, data.teammate, data.id)
+      if (tool) {
+        finishTimedState(tool)
+        tool.summary = data.message || '工具执行出错'
+        tool.status = 'error'
+      }
+      updatePending(`队友工具 ${data.name || ''} 出错`, data.message || '', 'error')
+      return
+    }
+
+    if (data.event === 'team_run_done') {
+      const sub = findSubagent(assistant, data.parent_id, data.teammate)
+      if (sub) {
+        finishTimedState(sub)
+        sub.status = 'done'
+        sub.summary = data.summary
+      }
+      updatePending('AI 正在整理队友回禀...', '')
+      return
+    }
+
+    if (data.event === 'team_run_error') {
+      const sub = findSubagent(assistant, data.parent_id, data.teammate)
+      if (sub) {
+        finishTimedState(sub)
+        sub.status = 'error'
+        sub.error = data.message
+      }
+      updatePending(`队友 ${data.teammate || ''} 出错`, data.message || '', 'error')
+    }
+  }
+
+  function updateTeamBootstrap(data: WsEvent) {
+    const boot = options.boot.value
+    if (!boot) return
+    boot.team ||= { members: [], leadInbox: [], leadUnread: 0, config: { members: [] } }
+
+    if (data.event === 'team_member_update' && data.member) {
+      const index = boot.team.members.findIndex((member) => member.name === data.member!.name)
+      if (index >= 0) {
+        boot.team.members[index] = { ...boot.team.members[index], ...data.member }
+      } else {
+        boot.team.members.push(data.member)
+      }
+      if (boot.team.config) boot.team.config.members = boot.team.members
+      return
+    }
+
+    if (data.event === 'team_message' && data.message) {
+      if (data.message.to === 'lead') {
+        boot.team.leadInbox ||= []
+        if (!boot.team.leadInbox.some((msg) => msg.id === data.message!.id)) {
+          boot.team.leadInbox.push(data.message)
+          boot.team.leadInbox = boot.team.leadInbox.slice(-50)
+        }
+        boot.team.leadUnread = (boot.team.leadUnread || 0) + 1
+      }
+      const target = boot.team.members.find((member) => member.name === data.message!.to)
+      if (target) {
+        target.recent_messages ||= []
+        if (!target.recent_messages.some((msg) => msg.id === data.message!.id)) {
+          target.recent_messages.push(data.message)
+          target.recent_messages = target.recent_messages.slice(-5)
+        }
+        target.unread = (target.unread || 0) + 1
+      }
+    }
+  }
+
+  function handleChatError(message: string) {
+    const assistant = currentAssistant.value
+    if (assistant) {
+      if (!assistant.content) {
+        const content = `出错了：${message}`
+        assistant.content = content
+        assistant.segments.push({ id: nextId('segment'), type: 'text', content })
+      }
+      assistant.streaming = false
+      markRunningAsAborted(assistant)
+    } else {
+      messages.value.push({ id: nextId('assistant'), role: 'assistant', content: `出错了：${message}`, segments: [{ id: nextId('segment'), type: 'text', content: `出错了：${message}` }], streaming: false })
+    }
+    currentAssistantId.value = null
+    busy.value = false
+    status.value = 'error'
+  }
+
+  function markRunningAsAborted(assistant?: AssistantMessage) {
+    if (!assistant) return
+    assistant.streaming = false
+    for (const seg of assistant.segments) {
+      if (seg.type !== 'tool') continue
+      if (seg.status === 'running') {
+        finishTimedState(seg)
+        seg.status = 'error_aborted'
+      }
+      for (const sub of seg.subagents || []) {
+        if (sub.status === 'running') {
+          finishTimedState(sub)
+          sub.status = 'error_aborted'
+        }
+        for (const tool of sub.tools || []) {
+          if (tool.status === 'running') {
+            finishTimedState(tool)
+            tool.status = 'error_aborted'
+          }
+        }
+      }
+    }
+  }
+
+  function finishInterruptedAssistant(assistant: AssistantMessage, fallback: string) {
+    if (!assistant.content && !assistant.segments.length) {
+      assistant.content = fallback
+      assistant.segments.push({ id: nextId('segment'), type: 'text', content: fallback })
+    }
+    markRunningAsAborted(assistant)
+  }
+
+  function findTeamSubagent(assistant: AssistantMessage, teammate: string) {
+    for (const segment of assistant.segments) {
+      if (segment.type !== 'tool') continue
+      const sub = segment.subagents?.find((item) => item.kind === 'team' && item.id === teammate)
+      if (sub) return sub
+    }
+    return undefined
+  }
+
+  function attachTeamMessage(assistant: AssistantMessage, message: TeamMessage) {
+    const teammate = message.to === 'lead' ? message.from : message.to
+    if (!teammate || teammate === 'lead') return
+    const sub = findTeamSubagent(assistant, teammate)
+    if (!sub) return
+    sub.messages ||= []
+    if (!sub.messages.some((item) => item.id === message.id)) {
+      sub.messages.push(message)
+      sub.messages = sub.messages.slice(-8)
+    }
+  }
+
+  function finishTimedState(state: { startedAt?: number; endedAt?: number; durationMs?: number }) {
+    const endedAt = Date.now()
+    state.endedAt = endedAt
+    if (state.startedAt) state.durationMs = Math.max(0, endedAt - state.startedAt)
+  }
+
+  function persistRuntimeSnapshot() {
+    if (!messages.value.length) {
+      clearRuntimeSnapshot()
+      return
+    }
+    const snapshot: RuntimeSnapshot = {
+      messages: messages.value,
+      currentAssistantId: currentAssistantId.value,
+      lastSeq: lastSeq.value,
+      savedAt: Date.now(),
+      transcript: transcriptFromMessages(messages.value),
+    }
+    try {
+      writeRuntimeSnapshotRaw(JSON.stringify(snapshot))
+    } catch {
+      // localStorage can be full or unavailable; backend history remains the text fallback.
+    }
+  }
+
+  function clearRuntimeSnapshot() {
+    try {
+      clearRuntimeSnapshotRaw()
+    } catch {
+      // Ignore storage failures; backend history remains the source of truth after completion.
+    }
+  }
+
+  return {
+    messages,
+    busy,
+    status,
+    pending,
+    runtimeText,
+    connectSocket,
+    sendMessage,
+    sendInteractionAnswer,
+    sendPlanComment,
+    approvePlan,
+    cancelInteraction,
+    clearChat,
+    addLocalCommand,
+    restoreFromHistory,
+  }
+}
+
+interface RuntimeSnapshot {
+  messages: ChatMessage[]
+  currentAssistantId: string | null
+  lastSeq: number
+  savedAt: number
+  transcript?: RuntimeHistoryItem[]
+}
+
+function loadRuntimeSnapshot(history: RuntimeHistoryItem[]): RuntimeSnapshot | null {
+  try {
+    const raw = readRuntimeSnapshotRaw()
+    if (!raw) return null
+    const snapshot = JSON.parse(raw) as RuntimeSnapshot
+    if (!snapshot.savedAt || Date.now() - snapshot.savedAt > RUNTIME_MAX_AGE_MS) {
+      clearRuntimeSnapshotRaw()
+      return null
+    }
+    if (!Array.isArray(snapshot.messages)) return null
+    if (snapshot.currentAssistantId) {
+      if (Date.now() - snapshot.savedAt > IN_FLIGHT_MAX_AGE_MS) {
+        return finalizedSnapshot(snapshot)
+      }
+      if (!matchesInFlightBackendHistory(snapshot, history)) return null
+      return snapshot
+    }
+    if (!matchesBackendHistory(snapshot, history)) return null
+    return snapshot
+  } catch {
+    return null
+  }
+}
+
+function finalizedSnapshot(snapshot: RuntimeSnapshot): RuntimeSnapshot {
+  const messages = snapshot.messages.map((message) => {
+    if (message.role !== 'assistant' || message.id !== snapshot.currentAssistantId) return message
+    const fallback = '（上次回复已超时中断，请重新发送。）'
+    const segments = message.segments.length ? message.segments : [{ id: nextId('segment'), type: 'text' as const, content: fallback }]
+    const content = message.content || fallback
+    return { ...message, content, segments, streaming: false } satisfies AssistantMessage
+  })
+  return { ...snapshot, messages, currentAssistantId: null, lastSeq: 0 }
+}
+
+function matchesInFlightBackendHistory(snapshot: RuntimeSnapshot, history: RuntimeHistoryItem[]) {
+  const expected = normalizeTranscript(history)
+  const actual = normalizeTranscript(transcriptFromMessages(withoutCurrentAssistant(snapshot)))
+  if (actual.length !== expected.length) return false
+  return expected.every((item, index) => item.role === actual[index]?.role && item.content === actual[index]?.content)
+}
+
+function withoutCurrentAssistant(snapshot: RuntimeSnapshot) {
+  return snapshot.messages.filter((message) => message.id !== snapshot.currentAssistantId)
+}
+
+function matchesBackendHistory(snapshot: RuntimeSnapshot, history: RuntimeHistoryItem[]) {
+  const expected = normalizeTranscript(history)
+  if (!expected.length) return false
+  const actual = normalizeTranscript(snapshot.transcript?.length ? snapshot.transcript : transcriptFromMessages(snapshot.messages))
+  if (actual.length !== expected.length) return false
+  return expected.every((item, index) => item.role === actual[index]?.role && item.content === actual[index]?.content)
+}
+
+function normalizeTranscript(items: RuntimeHistoryItem[]) {
+  return items
+    .filter((item) => (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string')
+    .map((item) => ({ role: item.role, content: item.content }))
+}
+
+function transcriptFromMessages(items: ChatMessage[]): RuntimeHistoryItem[] {
+  return items
+    .filter((message) => !message.local)
+    .map((message) => {
+      if (message.role === 'user') return { role: 'user', content: message.content }
+      return { role: 'assistant', content: assistantText(message) }
+    })
+}
+
+function assistantText(message: AssistantMessage) {
+  if (message.content) return message.content
+  return message.segments
+    .filter((segment) => segment.type === 'text')
+    .map((segment) => segment.content)
+    .join('')
+}
