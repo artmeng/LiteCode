@@ -149,7 +149,7 @@ class AgentLoop:
         else:
             unarchived = self.memory.load_unarchived_history()
             if startup_compaction and len(unarchived) >= 2:
-                logger.info(f"[Startup: found {len(unarchived)} unarchived turns, compacting...]")
+                logger.info(f"[Startup: found {len(unarchived)} unarchived messages, compacting...]")
                 try:
                     self.compactor.compact_startup(unarchived)
                 except Exception as exc:

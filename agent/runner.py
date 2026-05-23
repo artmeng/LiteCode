@@ -615,26 +615,44 @@ class AgentRunner:
         3. PermissionManager 权限评估（ask_before_edit 模式下高风险操作触发审批）。
         通过后在 asyncio.to_thread 中同步执行，requires_runtime_context 工具额外注入 loop/emit。
         """
+        # ── 门禁 1：Plan 模式白名单 ──────────────────────────────────────────
+        # control_manager 存在且当前处于 plan 模式时，只有只读工具和 ask_user/propose_plan 被允许；
+        # 其余写工具直接返回 Error 字符串，LLM 收到后自行调整策略，不抛异常。
         if self.control_manager is not None and not self.control_manager.is_tool_allowed(call.name, self.registry):
             return (
                 f"Error: 工具 '{call.name}' 在 Plan 模式下不可用。"
                 "计划批准前只允许使用只读工具以及 ask_user/propose_plan。"
             )
+        # ── 门禁 2：Ask Guard（用户意图歧义拦截）────────────────────────────
+        # clarification 在 turn 开始时对最后一条用户消息做静态正则评估；
+        # required=True 表示消息含宽泛歧义词（重构/删除/发布等），此时写工具被阻断，
+        # 强制 LLM 先调用 ask_user 澄清意图，只读工具和 ask_user 本身不受影响。
         if clarification and clarification.required and self._ask_guard_blocks_tool(call.name):
             return _ASK_GUARD_BLOCK
+        # ── 门禁 3：PermissionManager 权限评估 ──────────────────────────────
         if self.control_manager is not None:
+            # 先查一次性授权缓存（approved_once / denied_once），缓存未命中再走规则匹配；
+            # auto 模式直接 allow，plan 模式走白名单，ask_before_edit 走高危规则。
             decision = self.control_manager.assess_permission(call.name, call.arguments, self.registry)
             if decision.requires_approval:
+                # 高危操作需要用户审批：创建 AskCard interaction，写入 state.json，
+                # 返回 __CONTROL_PAUSE__:... 占位字符串，后续被 _maybe_pause_for_control 检测到后
+                # 抛出 TurnPaused，挂起整个 turn 等待用户点击允许/拒绝。
                 return self.control_manager.permission_approval_result(decision, parent_call_id=call.id)
             if not decision.allowed:
+                # 已被缓存拒绝或未知 mode：直接返回拒绝错误，不触发 AskCard。
                 return f"Error: 权限拒绝 {call.name}: {decision.reason}"
+        # ── 三道门禁全部通过，执行工具 ──────────────────────────────────────
         tool = self.registry.get(call.name)
         if emit and tool is not None and getattr(tool, "requires_runtime_context", False):
+            # 部分工具（如 ask_user、propose_plan、dispatch_subagent）需要访问事件循环和 emit 函数，
+            # 通过 requires_runtime_context=True 标记，在此注入 loop 和 emit 供工具内部推送 WS 事件。
             loop = asyncio.get_running_loop()
             return await asyncio.to_thread(
                 self.registry.execute, call.name, call.arguments,
                 emit=emit, loop=loop, parent_call_id=call.id,
             )
+        # 普通工具：在独立线程中同步执行，避免阻塞事件循环。
         return await asyncio.to_thread(self.registry.execute, call.name, call.arguments)
 
     def _assess_clarification(self, history: list[dict[str, Any]]) -> ClarificationAssessment:

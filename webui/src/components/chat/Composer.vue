@@ -331,8 +331,7 @@ const sendDisabled = computed(() => props.busy || (!value.value.trim() && drafts
               :aria-expanded="modeMenuOpen" :title="modeTitle" :disabled="props.busy" @click="toggleModeMenu">
               <img class="mode-icon" :src="currentMode.icon" alt="" width="18" height="18" />
               <span>{{ currentMode.label }}</span>
-              <em>{{ currentMode.value === 'plan' ? 'Plan first' : currentMode.value === 'auto' ? 'Full auto' : 'Ask
-                first' }}</em>
+              <em>{{ currentMode.value === 'plan' ? 'Plan first' : currentMode.value === 'auto' ? 'Full auto' : 'Ask first' }}</em>
               <img class="mode-caret" :src="actionAssets.caretDown" alt="" width="14" height="14" />
             </button>
 

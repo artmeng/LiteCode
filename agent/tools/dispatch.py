@@ -76,6 +76,7 @@ class DispatchSubagentTool(Tool):
 
         sub_registry = ToolRegistry()
         for tool_name in spec.tool_names:
+            # _parent_registry是主Agent的全量工具注册表，代表主Agent拥有的所有工具集合。
             tool = self._parent_registry.get(tool_name)
             if tool is not None:
                 sub_registry.register(tool)
